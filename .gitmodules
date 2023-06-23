@@ -1,0 +1,6 @@
+[submodule "Dependencies/length-disassembler"]
+	path = Dependencies/length-disassembler
+	url = https://github.com/Nomade040/length-disassembler.git
+[submodule "Dependencies/SignatureScanner"]
+	path = Dependencies/SignatureScanner
+	url = https://github.com/Sumandora/SignatureScanner.git
