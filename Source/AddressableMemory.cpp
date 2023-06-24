@@ -53,10 +53,6 @@ bool BCRL::MemoryRegionStorage::Update()
 
 	fileStream.close();
 
-    std::sort(memoryRegions.begin(), memoryRegions.end(), [](const MemoryRegion& a, const MemoryRegion& b) {
-        return a.addressSpace.front() < b.addressSpace.front();
-    });
-
 	this->memoryRegions = memoryRegions;
 	return true;
 }
