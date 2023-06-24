@@ -44,7 +44,7 @@ bool BCRL::MemoryRegionStorage::Update()
 
 		std::string& addressRange = columns[0];
 
-		size_t dash = addressRange.find("-");
+		size_t dash = addressRange.find('-');
 		std::uintptr_t begin = std::stol(addressRange.substr(0, dash), 0, 16);
 		std::uintptr_t end = std::stol(addressRange.substr(dash + 1, addressRange.length()), 0, 16);
 
@@ -52,17 +52,19 @@ bool BCRL::MemoryRegionStorage::Update()
 	}
 
 	fileStream.close();
+
+    std::sort(memoryRegions.begin(), memoryRegions.end(), [](const MemoryRegion& a, const MemoryRegion& b) {
+        return a.addressSpace.front() < b.addressSpace.front();
+    });
+
 	this->memoryRegions = memoryRegions;
 	return true;
 }
 
 bool BCRL::MemoryRegionStorage::IsAddressReadable(void* address) const
 {
-	for (const MemoryRegion& memoryRegion : this->memoryRegions) {
-		if (&memoryRegion.addressSpace.front() <= address && address < &memoryRegion.addressSpace.back())
-			return true;
-	}
-	return false;
+    const MemoryRegion* memoryRegion = AddressRegion(address);
+    return memoryRegion;
 }
 
 std::vector<BCRL::MemoryRegionStorage::MemoryRegion> BCRL::MemoryRegionStorage::GetMemoryRegions(std::optional<bool> writable, std::optional<bool> executable) const
@@ -87,9 +89,18 @@ std::vector<BCRL::MemoryRegionStorage::MemoryRegion> BCRL::MemoryRegionStorage::
 
 const BCRL::MemoryRegionStorage::MemoryRegion* BCRL::MemoryRegionStorage::AddressRegion(void* address) const
 {
-	for (const MemoryRegion& memoryRegion : this->memoryRegions) {
-		if (&memoryRegion.addressSpace.front() <= address && address < &memoryRegion.addressSpace.back())
-			return &memoryRegion;
-	}
-	return nullptr;
+    long left = 0;
+    long right = memoryRegions.size() - 1;
+    while (left <= right) {
+        std::size_t middle = left + (right - left) / 2;
+        const MemoryRegion& memoryRegion = memoryRegions[middle];
+        if (&memoryRegion.addressSpace.front() <= address && address < &memoryRegion.addressSpace.back())
+            return &memoryRegion;
+
+        if (address < &memoryRegion.addressSpace.front())
+            right = middle - 1;
+        else
+            left = middle + 1;
+    }
+    return nullptr;
 }
