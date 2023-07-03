@@ -1,8 +1,5 @@
 #include "BCRL.hpp"
 
-#include <cstdint>
-#include <optional>
-
 BCRL::SafePointer BCRL::SafePointer::Invalidate() const
 {
 	SafePointer safePointer = { pointer, IsSafe() };

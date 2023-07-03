@@ -1,8 +1,5 @@
 #include "BCRL.hpp"
 
-#include <algorithm>
-#include <optional>
-
 BCRL::Session BCRL::Session::PurgeInvalid(std::size_t length)
 {
 	return Map([length](SafePointer safePointer) -> std::optional<BCRL::SafePointer> {
@@ -58,9 +55,10 @@ BCRL::Session BCRL::Session::Map(std::function<std::optional<BCRL::SafePointer>(
 		if (newSafePointer.has_value())
 			newPointers.push_back(newSafePointer.value());
 	}
+	Session session{ newPointers };
 	if (purgeInvalid)
-		PurgeInvalid();
-	return { newPointers };
+		session.PurgeInvalid();
+	return session;
 }
 
 BCRL::Session BCRL::Session::Map(std::function<std::vector<BCRL::SafePointer>(BCRL::SafePointer)> transformer, bool purgeInvalid)
@@ -72,7 +70,8 @@ BCRL::Session BCRL::Session::Map(std::function<std::vector<BCRL::SafePointer>(BC
 			newPointers.push_back(safePointer);
 		});
 	}
+	Session session{ newPointers };
 	if (purgeInvalid)
-		PurgeInvalid();
-	return { newPointers };
+		session.PurgeInvalid();
+	return session;
 }

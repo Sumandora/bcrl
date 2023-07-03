@@ -1,7 +1,5 @@
 #include "BCRL.hpp"
 
-#include <optional>
-
 std::vector<void*> BCRL::Session::Pointers()
 {
 	std::vector<void*> pointers;

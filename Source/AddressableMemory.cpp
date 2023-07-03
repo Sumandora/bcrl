@@ -1,12 +1,7 @@
 #include "BCRL.hpp"
 
-#include <cstddef>
 #include <fstream>
-#include <iostream>
-#include <optional>
-#include <span>
 #include <sstream>
-#include <vector>
 
 BCRL::MemoryRegionStorage::MemoryRegionStorage()
 {
@@ -39,16 +34,25 @@ bool BCRL::MemoryRegionStorage::Update()
 		if (columns[1][0] != 'r')
 			continue; // If the region isn't readable, why would we bother keeping it?
 
-		if (std::stoi(columns[4]) == 0)
-			continue; // Not a file mapping
-
 		std::string& addressRange = columns[0];
 
 		size_t dash = addressRange.find("-");
 		std::uintptr_t begin = std::stol(addressRange.substr(0, dash), 0, 16);
 		std::uintptr_t end = std::stol(addressRange.substr(dash + 1, addressRange.length()), 0, 16);
 
-		memoryRegions.push_back({ { reinterpret_cast<std::byte*>(begin), end - begin }, columns[1][1] == 'w', columns[1][2] == 'x' });
+		std::optional<std::string> fileName = std::nullopt;
+		std::string name = "";
+		for (size_t i = 5; i < columns.size(); i++) {
+			if (!columns[i].empty() && columns[i] != "(deleted)")
+				name += columns[i] + " ";
+		}
+		name = name.substr(0, name.length() - 1);
+		if (name.starts_with("["))
+			continue;
+		else if (!name.empty())
+			fileName = name;
+
+		memoryRegions.push_back({ { reinterpret_cast<std::byte*>(begin), end - begin }, columns[1][1] == 'w', columns[1][2] == 'x', fileName });
 	}
 
 	fileStream.close();
@@ -65,11 +69,8 @@ bool BCRL::MemoryRegionStorage::IsAddressReadable(void* address) const
 	return false;
 }
 
-std::vector<BCRL::MemoryRegionStorage::MemoryRegion> BCRL::MemoryRegionStorage::GetMemoryRegions(std::optional<bool> writable, std::optional<bool> executable) const
+std::vector<BCRL::MemoryRegionStorage::MemoryRegion> BCRL::MemoryRegionStorage::GetMemoryRegions(std::optional<bool> writable, std::optional<bool> executable, std::optional<std::string> name) const
 {
-	if (!writable.has_value() && !executable.has_value())
-		return this->memoryRegions;
-
 	std::vector<BCRL::MemoryRegionStorage::MemoryRegion> memoryRegions{};
 
 	for (const MemoryRegion& memoryRegion : this->memoryRegions) {
@@ -77,6 +78,9 @@ std::vector<BCRL::MemoryRegionStorage::MemoryRegion> BCRL::MemoryRegionStorage::
 			continue;
 
 		if (executable.has_value() && memoryRegion.executable != executable.value())
+			continue;
+
+		if (name.has_value() && (!memoryRegion.name.has_value() || !memoryRegion.name.value().ends_with('/' + name.value())))
 			continue;
 
 		memoryRegions.push_back({ memoryRegion });

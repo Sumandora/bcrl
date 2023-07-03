@@ -10,6 +10,7 @@ add_executable(bcrl
     Source/AddressableMemory.cpp
     Source/SafePointer/SafePointer.cpp
     Source/SafePointer/Signatures.cpp
+    Source/SafePointer/Strings.cpp
     Source/SafePointer/X86.cpp
     Source/Session/AdvancedFlow.cpp
     Source/Session/DownPassers.cpp
@@ -27,5 +28,9 @@ target_sources(bcrl PRIVATE ${LDE_SOURCE_FILES})
 #target_compile_definitions(bcrl PRIVATE BCLR_DISABLE_LDE)
 
 target_include_directories(bcrl PRIVATE Dependencies/SignatureScanner/include)
-file(GLOB SIGNATURESCANNER_SOURCE_FILES "${CMAKE_SOURCE_DIR}/Dependencies/SignatureScanner/Source/*.cpp")
+file(GLOB_RECURSE SIGNATURESCANNER_SOURCE_FILES "${CMAKE_SOURCE_DIR}/Dependencies/SignatureScanner/Source/*.cpp")
 target_sources(bcrl PRIVATE ${SIGNATURESCANNER_SOURCE_FILES})
+
+target_compile_definitions(bcrl PRIVATE SIGNATURESCANNER_ENABLE_IDA_SEARCH)
+target_compile_definitions(bcrl PRIVATE SIGNATURESCANNER_ENABLE_STRING_SEARCH)
+target_compile_definitions(bcrl PRIVATE SIGNATURESCANNER_ENABLE_XREF_SEARCH)

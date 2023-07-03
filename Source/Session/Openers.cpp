@@ -1,63 +1,40 @@
 #include "BCRL.hpp"
 
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <link.h>
-#include <optional>
-
 #include "SignatureScanner.hpp"
 
 BCRL::Session BCRL::Session::Module(const char* moduleName)
 {
-	void* handle = dlopen(moduleName, RTLD_NOW | RTLD_NOLOAD | RTLD_LOCAL);
-	if (!handle)
+	memoryRegionStorage.Update();
+	std::vector<MemoryRegionStorage::MemoryRegion> memoryRegions = memoryRegionStorage.GetMemoryRegions(std::nullopt, std::nullopt, moduleName);
+	if (memoryRegions.empty())
 		return { nullptr };
-
-	link_map* linkMap;
-	if (dlinfo(handle, RTLD_DL_LINKMAP, &linkMap) != 0) {
-		dlclose(handle);
-		return { nullptr };
-	}
-
-	void* base = reinterpret_cast<void*>(linkMap->l_addr);
-
-	dlclose(handle);
-
-	return { base };
+	return { &memoryRegions[0].addressSpace.front() };
 }
 
 BCRL::Session BCRL::Session::String(const char* string)
 {
+	memoryRegionStorage.Update();
 	std::vector<void*> pointers{};
-	const size_t length = std::strlen(string);
+	SignatureScanner::StringSignature signature{ string };
 
 	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.GetMemoryRegions()) {
-		for (std::uintptr_t addr = reinterpret_cast<std::uintptr_t>(&fileMapping.addressSpace.front());
-			 addr < reinterpret_cast<std::uintptr_t>(&fileMapping.addressSpace.back()) - length;
-			 addr++) {
-			char* ptr = reinterpret_cast<char*>(addr);
-			if (ptr != string && std::strcmp(ptr, string) == 0) {
-				pointers.push_back(reinterpret_cast<void*>(addr));
-			}
+		for (void* ptr : signature.FindAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
+			pointers.push_back(ptr);
 		}
 	}
 
 	return { pointers };
 }
 
-BCRL::Session BCRL::Session::Signature(const char* signature)
+BCRL::Session BCRL::Session::Signature(const char* signature, std::optional<bool> code)
 {
+	memoryRegionStorage.Update();
 	std::vector<void*> pointers{};
-	SignatureScanner::Signature convertedSignature{ signature };
+	SignatureScanner::ByteSignature convertedSignature{ signature };
 
-	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.GetMemoryRegions()) {
-		for (std::uintptr_t addr = reinterpret_cast<std::uintptr_t>(&fileMapping.addressSpace.front());
-			 addr < reinterpret_cast<std::uintptr_t>(&fileMapping.addressSpace.back()) - convertedSignature.Size();
-			 addr++) {
-			if (convertedSignature.DoesMatch(reinterpret_cast<std::byte*>(addr)))
-				pointers.push_back(reinterpret_cast<void*>(addr));
+	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.GetMemoryRegions(std::nullopt, code)) {
+		for (void* ptr : convertedSignature.FindAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
+			pointers.push_back(ptr);
 		}
 	}
 
@@ -66,15 +43,18 @@ BCRL::Session BCRL::Session::Signature(const char* signature)
 
 BCRL::Session BCRL::Session::PointerList(std::vector<void*> pointers)
 {
+	memoryRegionStorage.Update();
 	return { pointers };
 }
 
 BCRL::Session BCRL::Session::Pointer(void* pointer)
 {
+	memoryRegionStorage.Update();
 	return { pointer };
 }
 
-BCRL::Session BCRL::Session::PointerArray(void* pointerArray, std::size_t index)
+BCRL::Session BCRL::Session::ArrayPointer(void* pointerArray, std::size_t index)
 {
+	memoryRegionStorage.Update();
 	return { (*reinterpret_cast<void***>(pointerArray))[index] };
 }

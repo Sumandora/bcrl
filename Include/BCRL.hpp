@@ -1,15 +1,11 @@
 #ifndef BCRL_HPP
 #define BCRL_HPP
 
-#include <compare>
-#include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <memory>
 #include <optional>
 #include <span>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace BCRL {
@@ -18,6 +14,7 @@ namespace BCRL {
 		struct MemoryRegion {
 			std::span<std::byte> addressSpace;
 			bool writable, executable;
+			std::optional<std::string> name;
 		};
 
 	private:
@@ -27,22 +24,15 @@ namespace BCRL {
 		MemoryRegionStorage();
 		bool Update(); // To update memory regions call this (for example on dlopen/dlclose calls)
 
-		std::vector<MemoryRegion> GetMemoryRegions(std::optional<bool> writable = std::nullopt, std::optional<bool> executable = std::nullopt) const;
+		std::vector<MemoryRegion> GetMemoryRegions(
+			std::optional<bool> writable = std::nullopt,
+			std::optional<bool> executable = std::nullopt,
+			std::optional<std::string> name = std::nullopt) const;
 		bool IsAddressReadable(void* address) const;
 		const MemoryRegion* AddressRegion(void* address) const;
 
 	} memoryRegionStorage;
 
-#if defined(__x86_64) || defined(i386)
-	struct XREFTypes {
-#ifdef __x86_64
-		bool search32bit, search64bit;
-#else
-		bool search16bit, search32bit;
-#endif
-	};
-
-#endif
 	class SafePointer { // A pointer which can't cause read access violations
 		void* pointer;
 		bool invalid = false; // Set to true, when a operation failed
@@ -68,7 +58,7 @@ namespace BCRL {
 		template <typename T>
 		inline std::optional<T> Read() const
 		{
-			if (IsValid(sizeof(T)))
+			if (IsValid(sizeof(T*)))
 				return *(T*)pointer;
 			return std::nullopt;
 		}
@@ -100,17 +90,19 @@ namespace BCRL {
 
 #ifndef BCLR_DISABLE_LDE
 		SafePointer PrevInstruction() const; // WARNING: X86 can't be disassembled backwards properly, use with caution
-		SafePointer NextInstruction() const; // `unsafe` forces the disassembly, even if it might lead to read access violations
+		SafePointer NextInstruction() const;
 #endif
-		std::vector<SafePointer> FindXREFs(const XREFTypes& types = { true, true }) const; // Since there can be multiple xrefs, this can increase the amount of addresses
-
+		std::vector<SafePointer> FindXREFs(bool relative = true, bool absolute = true) const; // Since there can be multiple xrefs, this can increase the amount of addresses
+		std::vector<SafePointer> FindXREFs(const std::string& moduleName, bool relative = true, bool absolute = true) const;
 #endif
 		// Signatures
-		SafePointer PrevOccurence(const std::string& signature) const; // Last occurence of signature
-		SafePointer NextOccurence(const std::string& signature) const; // Next occurence of signature
-
-		// Misc
+		SafePointer PrevByteOccurence(const std::string& signature, std::optional<bool> code = std::nullopt) const; // Last occurence of signature
+		SafePointer NextByteOccurence(const std::string& signature, std::optional<bool> code = std::nullopt) const; // Next occurence of signature
 		bool DoesMatch(const std::string& signature) const; // Tests if the given signature matches the current address
+
+		// Strings
+		SafePointer PrevStringOccurence(const std::string& string, std::optional<bool> code = std::nullopt) const; // Prev occurence of string
+		SafePointer NextStringOccurence(const std::string& string, std::optional<bool> code = std::nullopt) const; // Next occurence of string
 
 		inline std::strong_ordering operator<=>(const SafePointer& other) const
 		{
@@ -129,12 +121,11 @@ namespace BCRL {
 				return false; // It was already eliminated
 			if (!safe)
 				return true; // The user wants it this way
-			bool valid = true;
 			for (std::size_t i = 0; i < length; i++) {
 				if (!memoryRegionStorage.IsAddressReadable(Add(i).pointer))
-					valid = false;
+					return false;
 			}
-			return valid;
+			return true;
 		}
 
 		inline void* GetPointer() const
@@ -168,12 +159,12 @@ namespace BCRL {
 		Session() = delete;
 
 		// Openers
-		static Session Signature(const char* signature);
+		static Session Signature(const char* signature, std::optional<bool> code = std::nullopt);
 		static Session Module(const char* moduleName);
 		static Session String(const char* string);
 		static Session PointerList(std::vector<void*> pointers);
 		static Session Pointer(void* pointer);
-		static Session PointerArray(void* pointerArray, std::size_t index); // e.g. Virtual function tables
+		static Session ArrayPointer(void* pointerArray, std::size_t index); // e.g. Virtual function tables
 
 		// Manipulation
 		Session Add(std::size_t operand);
@@ -191,15 +182,18 @@ namespace BCRL {
 
 #ifndef BCLR_DISABLE_LDE
 		Session PrevInstruction(); // WARNING: X86 can't be disassembled backwards properly, use with caution
-		Session NextInstruction(); // `unsafe` forces the disassembly, even if it might lead to read access violations
+		Session NextInstruction();
 #endif
-
-		Session FindXREFs(XREFTypes types = { true, true }); // Since there can be multiple xrefs, this can increase the amount of addresses
-
+		Session FindXREFs(bool relative = true, bool absolute = true); // Since there can be multiple xrefs, this can increase the amount of addresses
+		Session FindXREFs(const std::string& moduleName, bool relative = true, bool absolute = true);
 #endif
 		// Signatures
-		Session PrevOccurence(const std::string& signature); // Last occurence of signature
-		Session NextOccurence(const std::string& signature); // Next occurence of signature
+		Session PrevByteOccurence(const std::string& signature); // Prev occurence of signature
+		Session NextByteOccurence(const std::string& signature); // Next occurence of signature
+
+		// Strings
+		Session PrevStringOccurence(const std::string& string); // Prev occurence of string
+		Session NextStringOccurence(const std::string& string); // Next occurence of string
 
 		// Advanced Flow
 		Session PurgeInvalid(std::size_t length = 1); // Will purge all pointers, which can't be dereferenced
