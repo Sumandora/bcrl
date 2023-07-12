@@ -2,6 +2,7 @@
 
 BCRL::Session BCRL::Session::PurgeInvalid(std::size_t length)
 {
+	// TODO Purge duplicates
 	return Map([length](SafePointer safePointer) -> std::optional<BCRL::SafePointer> {
 		if (safePointer.IsValid(length))
 			return safePointer;
@@ -55,9 +56,9 @@ BCRL::Session BCRL::Session::Map(std::function<std::optional<BCRL::SafePointer>(
 		if (newSafePointer.has_value())
 			newPointers.push_back(newSafePointer.value());
 	}
-	Session session{ newPointers };
+	Session session{ newPointers, IsSafe() };
 	if (purgeInvalid)
-		session.PurgeInvalid();
+		return session.PurgeInvalid();
 	return session;
 }
 
@@ -70,8 +71,8 @@ BCRL::Session BCRL::Session::Map(std::function<std::vector<BCRL::SafePointer>(BC
 			newPointers.push_back(safePointer);
 		});
 	}
-	Session session{ newPointers };
+	Session session{ newPointers, IsSafe() };
 	if (purgeInvalid)
-		session.PurgeInvalid();
+		return session.PurgeInvalid();
 	return session;
 }

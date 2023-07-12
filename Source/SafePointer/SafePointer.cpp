@@ -25,3 +25,16 @@ BCRL::SafePointer BCRL::SafePointer::Dereference() const
 
 	return Invalidate();
 }
+
+bool BCRL::SafePointer::IsValid(std::size_t length) const
+{
+	if (invalid)
+		return false; // It was already eliminated
+	if (!safe)
+		return true; // The user wants it this way
+	for (std::size_t i = 0; i < length; i++) {
+		if (!memoryRegionStorage.IsAddressReadable(Add(i).pointer))
+			return false;
+	}
+	return true;
+}

@@ -28,9 +28,6 @@ bool BCRL::MemoryRegionStorage::Update()
 		while (std::getline(ss, part, ' '))
 			columns.push_back(part);
 
-		if (columns.size() <= 6)
-			continue;
-
 		if (columns[1][0] != 'r')
 			continue; // If the region isn't readable, why would we bother keeping it?
 
@@ -41,16 +38,18 @@ bool BCRL::MemoryRegionStorage::Update()
 		std::uintptr_t end = std::stol(addressRange.substr(dash + 1, addressRange.length()), 0, 16);
 
 		std::optional<std::string> fileName = std::nullopt;
-		std::string name = "";
-		for (size_t i = 5; i < columns.size(); i++) {
-			if (!columns[i].empty() && columns[i] != "(deleted)")
-				name += columns[i] + " ";
+		if (columns.size() > 5) {
+			std::string name = "";
+			for (size_t i = 5; i < columns.size(); i++) {
+				if (!columns[i].empty() && columns[i] != "(deleted)")
+					name += columns[i] + " ";
+			}
+			name = name.substr(0, name.length() - 1);
+			if (name.starts_with("["))
+				continue;
+			else if (!name.empty())
+				fileName = name;
 		}
-		name = name.substr(0, name.length() - 1);
-		if (name.starts_with("["))
-			continue;
-		else if (!name.empty())
-			fileName = name;
 
 		memoryRegions.push_back({ { reinterpret_cast<std::byte*>(begin), end - begin }, columns[1][1] == 'w', columns[1][2] == 'x', fileName });
 	}

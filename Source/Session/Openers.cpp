@@ -7,8 +7,8 @@ BCRL::Session BCRL::Session::Module(const char* moduleName)
 	memoryRegionStorage.Update();
 	std::vector<MemoryRegionStorage::MemoryRegion> memoryRegions = memoryRegionStorage.GetMemoryRegions(std::nullopt, std::nullopt, moduleName);
 	if (memoryRegions.empty())
-		return { nullptr };
-	return { &memoryRegions[0].addressSpace.front() };
+		return { nullptr, true };
+	return { &memoryRegions[0].addressSpace.front(), true };
 }
 
 BCRL::Session BCRL::Session::String(const char* string)
@@ -23,7 +23,7 @@ BCRL::Session BCRL::Session::String(const char* string)
 		}
 	}
 
-	return { pointers };
+	return { pointers, true };
 }
 
 BCRL::Session BCRL::Session::Signature(const char* signature, std::optional<bool> code)
@@ -38,23 +38,23 @@ BCRL::Session BCRL::Session::Signature(const char* signature, std::optional<bool
 		}
 	}
 
-	return { pointers };
+	return { pointers, true };
 }
 
 BCRL::Session BCRL::Session::PointerList(std::vector<void*> pointers)
 {
 	memoryRegionStorage.Update();
-	return { pointers };
+	return { pointers, true };
 }
 
 BCRL::Session BCRL::Session::Pointer(void* pointer)
 {
 	memoryRegionStorage.Update();
-	return { pointer };
+	return { pointer, true };
 }
 
 BCRL::Session BCRL::Session::ArrayPointer(void* pointerArray, std::size_t index)
 {
 	memoryRegionStorage.Update();
-	return { (*reinterpret_cast<void***>(pointerArray))[index] };
+	return { (*reinterpret_cast<void***>(pointerArray))[index], true };
 }

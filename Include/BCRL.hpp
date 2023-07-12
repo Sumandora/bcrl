@@ -39,6 +39,7 @@ namespace BCRL {
 		bool safe;
 
 	public:
+		SafePointer() = delete;
 		inline SafePointer(void* pointer, bool safe)
 			: pointer(pointer)
 			, safe(safe)
@@ -115,18 +116,7 @@ namespace BCRL {
 			return reinterpret_cast<std::uintptr_t>(pointer) == reinterpret_cast<std::uintptr_t>(other.pointer);
 		}
 
-		inline bool IsValid(std::size_t length = 1) const
-		{
-			if (invalid)
-				return false; // It was already eliminated
-			if (!safe)
-				return true; // The user wants it this way
-			for (std::size_t i = 0; i < length; i++) {
-				if (!memoryRegionStorage.IsAddressReadable(Add(i).pointer))
-					return false;
-			}
-			return true;
-		}
+		bool IsValid(std::size_t length = 1) const;
 
 		inline void* GetPointer() const
 		{
@@ -139,18 +129,25 @@ namespace BCRL {
 
 		bool safe; // Are we using safety measures?
 
-		inline Session(std::vector<SafePointer> pointers)
+		inline Session(std::vector<SafePointer> pointers, bool safe)
 			: pointers(pointers)
+			, safe(safe)
 		{
+			for (SafePointer& pointer : this->pointers) {
+				pointer = pointer.SetSafe(safe);
+			}
 		}
-		inline Session(std::vector<void*> pointers)
+		inline Session(std::vector<void*> pointers, bool safe)
+			: pointers({})
+			, safe(safe)
 		{
 			for (void* pointer : pointers) {
 				this->pointers.push_back({ pointer, safe });
 			}
 		}
-		inline Session(void* pointer)
+		inline Session(void* pointer, bool safe)
 			: pointers({})
+			, safe(safe)
 		{
 			pointers.push_back({ pointer, safe });
 		}
