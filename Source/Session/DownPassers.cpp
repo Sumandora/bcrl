@@ -73,28 +73,28 @@ BCRL::Session BCRL::Session::FindXREFs(const std::string& moduleName, bool relat
 }
 #endif
 
-BCRL::Session BCRL::Session::PrevByteOccurence(const std::string& signature)
+BCRL::Session BCRL::Session::PrevByteOccurence(const std::string& signature, std::optional<bool> code)
 {
-	return Map([signature](SafePointer safePointer) {
+	return Map([&signature, &code](SafePointer safePointer) {
 		return safePointer.PrevByteOccurence(signature);
 	});
 }
-BCRL::Session BCRL::Session::NextByteOccurence(const std::string& signature)
+BCRL::Session BCRL::Session::NextByteOccurence(const std::string& signature, std::optional<bool> code)
 {
-	return Map([signature](SafePointer safePointer) {
-		return safePointer.NextByteOccurence(signature);
+	return Map([&signature, &code](SafePointer safePointer) {
+		return safePointer.NextByteOccurence(signature, code);
 	});
 }
 
 BCRL::Session BCRL::Session::PrevStringOccurence(const std::string& string)
 {
-	return Map([string](SafePointer safePointer) {
+	return Map([&string](SafePointer safePointer) {
 		return safePointer.PrevStringOccurence(string);
 	});
 }
 BCRL::Session BCRL::Session::NextStringOccurence(const std::string& string)
 {
-	return Map([string](SafePointer safePointer) {
+	return Map([&string](SafePointer safePointer) {
 		return safePointer.NextStringOccurence(string);
 	});
 }

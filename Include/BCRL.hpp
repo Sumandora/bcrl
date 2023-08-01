@@ -185,8 +185,8 @@ namespace BCRL {
 		Session FindXREFs(const std::string& moduleName, bool relative = true, bool absolute = true);
 #endif
 		// Signatures
-		Session PrevByteOccurence(const std::string& signature); // Prev occurence of signature
-		Session NextByteOccurence(const std::string& signature); // Next occurence of signature
+		Session PrevByteOccurence(const std::string& signature, std::optional<bool> code = std::nullopt); // Prev occurence of signature
+		Session NextByteOccurence(const std::string& signature, std::optional<bool> code = std::nullopt); // Next occurence of signature
 
 		// Strings
 		Session PrevStringOccurence(const std::string& string); // Prev occurence of string
