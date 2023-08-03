@@ -60,12 +60,6 @@ bool BCRL::MemoryRegionStorage::Update()
 	return true;
 }
 
-bool BCRL::MemoryRegionStorage::IsAddressReadable(void* address) const
-{
-    const MemoryRegion* memoryRegion = AddressRegion(address);
-    return memoryRegion;
-}
-
 std::vector<BCRL::MemoryRegionStorage::MemoryRegion> BCRL::MemoryRegionStorage::GetMemoryRegions(std::optional<bool> writable, std::optional<bool> executable, std::optional<std::string> name) const
 {
 	std::vector<BCRL::MemoryRegionStorage::MemoryRegion> memoryRegions{};
@@ -88,18 +82,18 @@ std::vector<BCRL::MemoryRegionStorage::MemoryRegion> BCRL::MemoryRegionStorage::
 
 const BCRL::MemoryRegionStorage::MemoryRegion* BCRL::MemoryRegionStorage::AddressRegion(void* address) const
 {
-    long left = 0;
-    long right = memoryRegions.size() - 1;
-    while (left <= right) {
-        std::size_t middle = left + (right - left) / 2;
-        const MemoryRegion& memoryRegion = memoryRegions[middle];
-        if (&memoryRegion.addressSpace.front() <= address && address < &memoryRegion.addressSpace.back())
-            return &memoryRegion;
+	long left = 0;
+	long right = memoryRegions.size() - 1;
+	while (left <= right) {
+		std::size_t middle = left + (right - left) / 2;
+		const MemoryRegion& memoryRegion = memoryRegions[middle];
+		if (&memoryRegion.addressSpace.front() <= address && address < &memoryRegion.addressSpace.back())
+			return &memoryRegion;
 
-        if (address < &memoryRegion.addressSpace.front())
-            right = middle - 1;
-        else
-            left = middle + 1;
-    }
-    return nullptr;
+		if (address < &memoryRegion.addressSpace.front())
+			right = middle - 1;
+		else
+			left = middle + 1;
+	}
+	return nullptr;
 }

@@ -32,8 +32,13 @@ bool BCRL::SafePointer::IsValid(std::size_t length) const
 		return false; // It was already eliminated
 	if (!safe)
 		return true; // The user wants it this way
+	const BCRL::MemoryRegionStorage::MemoryRegion* region = memoryRegionStorage.AddressRegion(pointer);
 	for (std::size_t i = 0; i < length; i++) {
-		if (!memoryRegionStorage.IsAddressReadable(Add(i).pointer))
+		void* pointer = Add(i).pointer;
+		if (&region->addressSpace.front() <= pointer && pointer < &region->addressSpace.back())
+			continue;
+		region = memoryRegionStorage.AddressRegion(pointer);
+		if (region == nullptr)
 			return false;
 	}
 	return true;

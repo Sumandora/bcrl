@@ -28,7 +28,6 @@ namespace BCRL {
 			std::optional<bool> writable = std::nullopt,
 			std::optional<bool> executable = std::nullopt,
 			std::optional<std::string> name = std::nullopt) const;
-		bool IsAddressReadable(void* address) const;
 		const MemoryRegion* AddressRegion(void* address) const;
 
 	} memoryRegionStorage;
