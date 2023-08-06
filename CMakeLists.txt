@@ -11,10 +11,14 @@ file(GLOB_RECURSE BCRL_SOURCE_FILES "${CMAKE_SOURCE_DIR}/Source/*.cpp")
 target_sources(bcrl PRIVATE ${BCRL_SOURCE_FILES})
 target_include_directories(bcrl PUBLIC Include)
 
-add_subdirectory(Dependencies/SignatureScanner)
+if (NOT (TARGET SignatureScanner))
+    add_subdirectory(Dependencies/SignatureScanner)
+endif ()
 target_link_libraries(bcrl PRIVATE SignatureScanner)
 
-add_subdirectory(Dependencies/length-disassembler)
+if (NOT (TARGET length-disassembler))
+    add_subdirectory(Dependencies/length-disassembler)
+endif ()
 target_link_libraries(bcrl PRIVATE length-disassembler)
 
 # When using this you won't have the length disassembler to step through instructions
