@@ -15,7 +15,7 @@ int main()
 	const char* newString = strdup("You will never find me!"); // The compiler reuses strings when possible
 
 	auto session = BCRL::Session::String(newString)
-					   .FindXREFs("bcrl", true, false) // main and SuperSecretMethod
+					   .FindXREFs("bcrlExample", true, false) // main and SuperSecretMethod
 					   .Add(4)
 					   .Repeater([](BCRL::SafePointer& ptr) { ptr = ptr.NextInstruction(); return !ptr.Equals<unsigned char>('\xe8'); }) // Find next call instruction
 					   .Add(5)
