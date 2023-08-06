@@ -16,7 +16,6 @@ int main()
 
 	auto session = BCRL::Session::String(newString)
 					   .FindXREFs("bcrlExample", true, false) // main and SuperSecretMethod
-					   .ForEach([](BCRL::SafePointer ptr) { printf("Thing: %p\n", ptr.GetPointer()); })
 					   .Add(4)
 					   .Repeater([](BCRL::SafePointer& ptr) { ptr = ptr.NextInstruction(); return !ptr.Equals<unsigned char>('\xe8'); }) // Find next call instruction
 					   .Add(5)
