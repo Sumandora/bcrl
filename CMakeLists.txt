@@ -7,17 +7,17 @@ set(CMAKE_CXX_FLAGS "-ggdb3")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_library(bcrl STATIC)
-file(GLOB_RECURSE BCRL_SOURCE_FILES "${CMAKE_SOURCE_DIR}/Source/*.cpp")
+file(GLOB_RECURSE BCRL_SOURCE_FILES "${PROJECT_SOURCE_DIR}/Source/*.cpp")
 target_sources(bcrl PRIVATE ${BCRL_SOURCE_FILES})
-target_include_directories(bcrl PUBLIC Include)
+target_include_directories(bcrl PUBLIC "${PROJECT_SOURCE_DIR}/Include")
 
 if (NOT (TARGET SignatureScanner))
-    add_subdirectory(Dependencies/SignatureScanner)
+    add_subdirectory("${PROJECT_SOURCE_DIR}/Dependencies/SignatureScanner")
 endif ()
 target_link_libraries(bcrl PRIVATE SignatureScanner)
 
 if (NOT (TARGET length-disassembler))
-    add_subdirectory(Dependencies/length-disassembler)
+    add_subdirectory("${PROJECT_SOURCE_DIR}/Dependencies/length-disassembler")
 endif ()
 target_link_libraries(bcrl PRIVATE length-disassembler)
 
@@ -28,7 +28,7 @@ target_compile_definitions(bcrl PRIVATE SIGNATURESCANNER_ENABLE_IDA_SEARCH)
 target_compile_definitions(bcrl PRIVATE SIGNATURESCANNER_ENABLE_STRING_SEARCH)
 target_compile_definitions(bcrl PRIVATE SIGNATURESCANNER_ENABLE_XREF_SEARCH)
 
-add_executable(bcrlExample Example/Main.cpp)
+add_executable(bcrlExample "${PROJECT_SOURCE_DIR}/Example/Main.cpp")
 target_link_libraries(bcrlExample PRIVATE bcrl)
 
 enable_testing()
