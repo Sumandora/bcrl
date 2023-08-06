@@ -20,6 +20,9 @@ target_link_libraries(bcrl PRIVATE length-disassembler)
 add_executable(bcrlExample Example/Main.cpp)
 target_link_libraries(bcrlExample PRIVATE bcrl)
 
+enable_testing()
+add_test(NAME bcrlExample COMMAND $<TARGET_FILE:bcrlExample>)
+
 # When using this you won't have the length disassembler to step through instructions
 #target_compile_definitions(bcrl PRIVATE BCLR_DISABLE_LDE)
 
