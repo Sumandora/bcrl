@@ -17,15 +17,15 @@ target_link_libraries(bcrl PRIVATE SignatureScanner)
 add_subdirectory(Dependencies/length-disassembler)
 target_link_libraries(bcrl PRIVATE length-disassembler)
 
+# When using this you won't have the length disassembler to step through instructions
+#target_compile_definitions(bcrl PUBLIC BCLR_DISABLE_LDE)
+
+target_compile_definitions(bcrl PRIVATE SIGNATURESCANNER_ENABLE_IDA_SEARCH)
+target_compile_definitions(bcrl PRIVATE SIGNATURESCANNER_ENABLE_STRING_SEARCH)
+target_compile_definitions(bcrl PRIVATE SIGNATURESCANNER_ENABLE_XREF_SEARCH)
+
 add_executable(bcrlExample Example/Main.cpp)
 target_link_libraries(bcrlExample PRIVATE bcrl)
 
 enable_testing()
 add_test(NAME bcrlExample COMMAND $<TARGET_FILE:bcrlExample>)
-
-# When using this you won't have the length disassembler to step through instructions
-#target_compile_definitions(bcrl PRIVATE BCLR_DISABLE_LDE)
-
-target_compile_definitions(bcrl PRIVATE SIGNATURESCANNER_ENABLE_IDA_SEARCH)
-target_compile_definitions(bcrl PRIVATE SIGNATURESCANNER_ENABLE_STRING_SEARCH)
-target_compile_definitions(bcrl PRIVATE SIGNATURESCANNER_ENABLE_XREF_SEARCH)
