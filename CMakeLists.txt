@@ -15,7 +15,7 @@ FetchContent_Declare(SignatureScanner
 	GIT_SHALLOW TRUE
 	GIT_TAG 710490d)
 FetchContent_MakeAvailable(SignatureScanner)
-target_link_libraries(bcrl PRIVATE SignatureScanner)
+target_link_libraries(bcrl SignatureScanner)
 
 FetchContent_Declare(LengthDisassembler
 	GIT_REPOSITORY https://github.com/Jovvik/length-disassembler
@@ -23,7 +23,7 @@ FetchContent_Declare(LengthDisassembler
 	GIT_SHALLOW TRUE
 	GIT_TAG 88fd89c)
 FetchContent_MakeAvailable(LengthDisassembler)
-target_link_libraries(bcrl PRIVATE length-disassembler)
+target_link_libraries(bcrl length-disassembler)
 
 if(PROJECT_IS_TOP_LEVEL)
 	add_executable(bcrlExample "${PROJECT_SOURCE_DIR}/Example/Main.cpp")
