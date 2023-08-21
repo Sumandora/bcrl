@@ -5,11 +5,11 @@
 
 BCRL::MemoryRegionStorage::MemoryRegionStorage()
 {
-	if (!Update())
+	if (!update())
 		this->memoryRegions = {};
 }
 
-bool BCRL::MemoryRegionStorage::Update()
+bool BCRL::MemoryRegionStorage::update()
 {
 	std::vector<MemoryRegion> memoryRegions{};
 	std::fstream fileStream{ "/proc/self/maps", std::fstream::in };
@@ -60,7 +60,7 @@ bool BCRL::MemoryRegionStorage::Update()
 	return true;
 }
 
-std::vector<BCRL::MemoryRegionStorage::MemoryRegion> BCRL::MemoryRegionStorage::GetMemoryRegions(std::optional<bool> writable, std::optional<bool> executable, std::optional<std::string> name) const
+std::vector<BCRL::MemoryRegionStorage::MemoryRegion> BCRL::MemoryRegionStorage::getMemoryRegions(std::optional<bool> writable, std::optional<bool> executable, std::optional<std::string> name) const
 {
 	std::vector<BCRL::MemoryRegionStorage::MemoryRegion> memoryRegions{};
 
@@ -80,7 +80,7 @@ std::vector<BCRL::MemoryRegionStorage::MemoryRegion> BCRL::MemoryRegionStorage::
 	return memoryRegions;
 }
 
-const BCRL::MemoryRegionStorage::MemoryRegion* BCRL::MemoryRegionStorage::AddressRegion(void* address) const
+const BCRL::MemoryRegionStorage::MemoryRegion* BCRL::MemoryRegionStorage::addressRegion(void* address) const
 {
 	long left = 0;
 	long right = memoryRegions.size() - 1;

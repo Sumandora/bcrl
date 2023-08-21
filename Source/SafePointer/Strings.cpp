@@ -4,11 +4,11 @@
 
 #include "SignatureScanner.hpp"
 
-BCRL::SafePointer BCRL::SafePointer::PrevStringOccurence(const std::string& string, std::optional<bool> code) const
+BCRL::SafePointer BCRL::SafePointer::prevStringOccurence(const std::string& string, std::optional<bool> code) const
 {
 	SignatureScanner::StringSignature signature{ string };
 
-	for (const MemoryRegionStorage::MemoryRegion& memoryRegion : std::ranges::views::reverse(memoryRegionStorage.GetMemoryRegions(std::nullopt, code))) {
+	for (const MemoryRegionStorage::MemoryRegion& memoryRegion : std::ranges::views::reverse(memoryRegionStorage.getMemoryRegions(std::nullopt, code))) {
 		if (&memoryRegion.addressSpace.front() > pointer)
 			continue;
 
@@ -17,17 +17,17 @@ BCRL::SafePointer BCRL::SafePointer::PrevStringOccurence(const std::string& stri
 		if (!hit)
 			continue;
 
-		return { hit, IsSafe() };
+		return { hit, isSafe() };
 	}
 
-	return Invalidate();
+	return invalidate();
 }
 
-BCRL::SafePointer BCRL::SafePointer::NextStringOccurence(const std::string& string, std::optional<bool> code) const
+BCRL::SafePointer BCRL::SafePointer::nextStringOccurence(const std::string& string, std::optional<bool> code) const
 {
 	SignatureScanner::StringSignature signature{ string };
 
-	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.GetMemoryRegions(std::nullopt, code)) {
+	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.getMemoryRegions(std::nullopt, code)) {
 		if (&fileMapping.addressSpace.back() < pointer)
 			continue;
 
@@ -36,8 +36,8 @@ BCRL::SafePointer BCRL::SafePointer::NextStringOccurence(const std::string& stri
 		if (!hit)
 			continue;
 
-		return { hit, IsSafe() };
+		return { hit, isSafe() };
 	}
 
-	return Invalidate();
+	return invalidate();
 }

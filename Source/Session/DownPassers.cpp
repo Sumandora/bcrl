@@ -1,98 +1,98 @@
 #include "BCRL.hpp"
 
-BCRL::Session BCRL::Session::Add(std::size_t operand)
+BCRL::Session BCRL::Session::add(std::size_t operand)
 {
-	return Map([operand](SafePointer safePointer) {
-		return safePointer.Add(operand);
+	return map([operand](SafePointer safePointer) {
+		return safePointer.add(operand);
 	});
 }
-BCRL::Session BCRL::Session::Sub(std::size_t operand)
+BCRL::Session BCRL::Session::sub(std::size_t operand)
 {
-	return Map([operand](SafePointer safePointer) {
-		return safePointer.Sub(operand);
+	return map([operand](SafePointer safePointer) {
+		return safePointer.sub(operand);
 	});
 }
-BCRL::Session BCRL::Session::Dereference()
+BCRL::Session BCRL::Session::dereference()
 {
-	return Map([](SafePointer safePointer) {
-		return safePointer.Dereference();
+	return map([](SafePointer safePointer) {
+		return safePointer.dereference();
 	});
 }
 
-BCRL::Session BCRL::Session::SetSafe(bool safe)
+BCRL::Session BCRL::Session::setSafe(bool safe)
 {
-	BCRL::Session session = Map([safe](SafePointer safePointer) {
-		return safePointer.SetSafe(safe);
+	BCRL::Session session = map([safe](SafePointer safePointer) {
+		return safePointer.setSafe(safe);
 	});
 	session.safe = safe;
 	return session;
 }
 
-BCRL::Session BCRL::Session::ToggleSafety()
+BCRL::Session BCRL::Session::toggleSafety()
 {
-	return Map([](SafePointer safePointer) {
-		return safePointer.ToggleSafety();
+	return map([](SafePointer safePointer) {
+		return safePointer.toggleSafety();
 	});
 }
 
 #if defined(__x86_64) || defined(i386)
-BCRL::Session BCRL::Session::RelativeToAbsolute()
+BCRL::Session BCRL::Session::relativeToAbsolute()
 {
-	return Map([](SafePointer safePointer) {
-		return safePointer.RelativeToAbsolute();
+	return map([](SafePointer safePointer) {
+		return safePointer.relativeToAbsolute();
 	});
 }
 
-BCRL::Session BCRL::Session::PrevInstruction()
+BCRL::Session BCRL::Session::prevInstruction()
 {
-	return Map([](SafePointer safePointer) {
-		return safePointer.PrevInstruction();
+	return map([](SafePointer safePointer) {
+		return safePointer.prevInstruction();
 	});
 }
-BCRL::Session BCRL::Session::NextInstruction()
+BCRL::Session BCRL::Session::nextInstruction()
 {
-	return Map([](SafePointer safePointer) {
-		return safePointer.NextInstruction();
-	});
-}
-
-BCRL::Session BCRL::Session::FindXREFs(bool relative, bool absolute)
-{
-	return Map([relative, absolute](SafePointer safePointer) {
-		return safePointer.FindXREFs(relative, absolute);
+	return map([](SafePointer safePointer) {
+		return safePointer.nextInstruction();
 	});
 }
 
-BCRL::Session BCRL::Session::FindXREFs(const std::string& moduleName, bool relative, bool absolute)
+BCRL::Session BCRL::Session::findXREFs(bool relative, bool absolute)
 {
-	return Map([&moduleName, relative, absolute](SafePointer safePointer) {
-		return safePointer.FindXREFs(moduleName, relative, absolute);
+	return map([relative, absolute](SafePointer safePointer) {
+		return safePointer.findXREFs(relative, absolute);
+	});
+}
+
+BCRL::Session BCRL::Session::findXREFs(const std::string& moduleName, bool relative, bool absolute)
+{
+	return map([&moduleName, relative, absolute](SafePointer safePointer) {
+		return safePointer.findXREFs(moduleName, relative, absolute);
 	});
 }
 #endif
 
-BCRL::Session BCRL::Session::PrevByteOccurence(const std::string& signature, std::optional<bool> code)
+BCRL::Session BCRL::Session::prevByteOccurence(const std::string& signature, std::optional<bool> code)
 {
-	return Map([&signature, &code](SafePointer safePointer) {
-		return safePointer.PrevByteOccurence(signature);
+	return map([&signature, &code](SafePointer safePointer) {
+		return safePointer.prevByteOccurence(signature);
 	});
 }
-BCRL::Session BCRL::Session::NextByteOccurence(const std::string& signature, std::optional<bool> code)
+BCRL::Session BCRL::Session::nextByteOccurence(const std::string& signature, std::optional<bool> code)
 {
-	return Map([&signature, &code](SafePointer safePointer) {
-		return safePointer.NextByteOccurence(signature, code);
+	return map([&signature, &code](SafePointer safePointer) {
+		return safePointer.nextByteOccurence(signature, code);
 	});
 }
 
-BCRL::Session BCRL::Session::PrevStringOccurence(const std::string& string)
+BCRL::Session BCRL::Session::prevStringOccurence(const std::string& string)
 {
-	return Map([&string](SafePointer safePointer) {
-		return safePointer.PrevStringOccurence(string);
+	return map([&string](SafePointer safePointer) {
+		return safePointer.prevStringOccurence(string);
 	});
 }
-BCRL::Session BCRL::Session::NextStringOccurence(const std::string& string)
+BCRL::Session BCRL::Session::nextStringOccurence(const std::string& string)
 {
-	return Map([&string](SafePointer safePointer) {
-		return safePointer.NextStringOccurence(string);
+	return map([&string](SafePointer safePointer) {
+		return safePointer.nextStringOccurence(string);
 	});
 }

@@ -4,18 +4,18 @@
 
 #if defined(__x86_64) || defined(i386)
 
-BCRL::SafePointer BCRL::SafePointer::RelativeToAbsolute() const
+BCRL::SafePointer BCRL::SafePointer::relativeToAbsolute() const
 {
 #ifdef __x86_64
-	std::optional<int32_t> offset = Read<int32_t>();
+	std::optional<int32_t> offset = read<int32_t>();
 	if (!offset.has_value())
-		return Invalidate();
-	return Add(sizeof(int32_t)).Add(offset.value());
+		return invalidate();
+	return add(sizeof(int32_t)).add(offset.value());
 #else
-	std::optional<int16_t> offset = Read<int16_t>();
+	std::optional<int16_t> offset = read<int16_t>();
 	if (!offset.has_value())
-		return Invalidate();
-	return Add(sizeof(int16_t)).Add(offset.value());
+		return invalidate();
+	return add(sizeof(int16_t)).add(offset.value());
 #endif
 }
 
@@ -25,56 +25,56 @@ BCRL::SafePointer BCRL::SafePointer::RelativeToAbsolute() const
 
 constexpr std::size_t longestX86Insn = 15;
 
-BCRL::SafePointer BCRL::SafePointer::PrevInstruction() const
+BCRL::SafePointer BCRL::SafePointer::prevInstruction() const
 {
 	// What I am doing here has no scientific backing, it just happens to work **most** of the time.
 	for (std::size_t offset = longestX86Insn * 2 /* Ensure we will pass a few instructions */; offset > 0; offset--) {
 		// The longer this for goes on, the worse/inaccurate the results will get
-		SafePointer addr = this->Sub(offset);
+		SafePointer addr = this->sub(offset);
 		std::size_t insnLength; // The last disassembled instruction
-		while (addr.pointer < this && IsValid(longestX86Insn))
-			addr = addr.Add(insnLength = ldisasm(pointer, sizeof(void*) == 8));
+		while (addr.pointer < this && isValid(longestX86Insn))
+			addr = addr.add(insnLength = ldisasm(pointer, sizeof(void*) == 8));
 		if ((*this == addr) == 0) {
 			// Apparently we found a point where instructions will end up exactly hitting
 			// our function, this seems good. This does not ensure correctness.
-			return Sub(insnLength);
+			return sub(insnLength);
 		}
 	}
 
-	return Invalidate();
+	return invalidate();
 }
 
-BCRL::SafePointer BCRL::SafePointer::NextInstruction() const
+BCRL::SafePointer BCRL::SafePointer::nextInstruction() const
 {
-	if (IsValid(longestX86Insn))
-		return Add(ldisasm(pointer, sizeof(void*) == 8));
+	if (isValid(longestX86Insn))
+		return add(ldisasm(pointer, sizeof(void*) == 8));
 	else
-		return Invalidate();
+		return invalidate();
 }
 #endif
 
-std::vector<BCRL::SafePointer> BCRL::SafePointer::FindXREFs(bool relative, bool absolute) const
+std::vector<BCRL::SafePointer> BCRL::SafePointer::findXREFs(bool relative, bool absolute) const
 {
 	std::vector<BCRL::SafePointer> newPointers{};
 
 	SignatureScanner::XRefSignature signature(this->pointer);
-	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.GetMemoryRegions(std::nullopt, true)) {
+	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.getMemoryRegions(std::nullopt, true)) {
 		for (void* ptr : signature.findAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
-			newPointers.push_back(SafePointer{ ptr, IsSafe() });
+			newPointers.push_back(SafePointer{ ptr, isSafe() });
 		}
 	}
 
 	return newPointers;
 }
 
-std::vector<BCRL::SafePointer> BCRL::SafePointer::FindXREFs(const std::string& moduleName, bool relative, bool absolute) const
+std::vector<BCRL::SafePointer> BCRL::SafePointer::findXREFs(const std::string& moduleName, bool relative, bool absolute) const
 {
 	std::vector<BCRL::SafePointer> newPointers{};
 
 	SignatureScanner::XRefSignature signature(this->pointer);
-	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.GetMemoryRegions(std::nullopt, true, moduleName)) {
+	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.getMemoryRegions(std::nullopt, true, moduleName)) {
 		for (void* ptr : signature.findAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
-			newPointers.push_back(SafePointer{ ptr, IsSafe() });
+			newPointers.push_back(SafePointer{ ptr, isSafe() });
 		}
 	}
 

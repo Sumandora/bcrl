@@ -2,22 +2,22 @@
 
 #include "SignatureScanner.hpp"
 
-BCRL::Session BCRL::Session::Module(const char* moduleName)
+BCRL::Session BCRL::Session::module(const char* moduleName)
 {
-	memoryRegionStorage.Update();
-	std::vector<MemoryRegionStorage::MemoryRegion> memoryRegions = memoryRegionStorage.GetMemoryRegions(std::nullopt, std::nullopt, moduleName);
+	memoryRegionStorage.update();
+	std::vector<MemoryRegionStorage::MemoryRegion> memoryRegions = memoryRegionStorage.getMemoryRegions(std::nullopt, std::nullopt, moduleName);
 	if (memoryRegions.empty())
 		return { nullptr, true };
 	return { &memoryRegions[0].addressSpace.front(), true };
 }
 
-BCRL::Session BCRL::Session::String(const char* string)
+BCRL::Session BCRL::Session::string(const char* string)
 {
-	memoryRegionStorage.Update();
+	memoryRegionStorage.update();
 	std::vector<void*> pointers{};
 	SignatureScanner::StringSignature signature{ string };
 
-	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.GetMemoryRegions()) {
+	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.getMemoryRegions()) {
 		for (void* ptr : signature.findAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
 			pointers.push_back(ptr);
 		}
@@ -26,13 +26,13 @@ BCRL::Session BCRL::Session::String(const char* string)
 	return { pointers, true };
 }
 
-BCRL::Session BCRL::Session::Signature(const char* signature, std::optional<bool> code)
+BCRL::Session BCRL::Session::signature(const char* signature, std::optional<bool> code)
 {
-	memoryRegionStorage.Update();
+	memoryRegionStorage.update();
 	std::vector<void*> pointers{};
 	SignatureScanner::ByteSignature convertedSignature{ signature };
 
-	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.GetMemoryRegions(std::nullopt, code)) {
+	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.getMemoryRegions(std::nullopt, code)) {
 		for (void* ptr : convertedSignature.findAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
 			pointers.push_back(ptr);
 		}
@@ -41,20 +41,20 @@ BCRL::Session BCRL::Session::Signature(const char* signature, std::optional<bool
 	return { pointers, true };
 }
 
-BCRL::Session BCRL::Session::PointerList(std::vector<void*> pointers)
+BCRL::Session BCRL::Session::pointerList(std::vector<void*> pointers)
 {
-	memoryRegionStorage.Update();
+	memoryRegionStorage.update();
 	return { pointers, true };
 }
 
-BCRL::Session BCRL::Session::Pointer(void* pointer)
+BCRL::Session BCRL::Session::pointer(void* pointer)
 {
-	memoryRegionStorage.Update();
+	memoryRegionStorage.update();
 	return { pointer, true };
 }
 
-BCRL::Session BCRL::Session::ArrayPointer(void* pointerArray, std::size_t index)
+BCRL::Session BCRL::Session::arrayPointer(void* pointerArray, std::size_t index)
 {
-	memoryRegionStorage.Update();
+	memoryRegionStorage.update();
 	return { (*reinterpret_cast<void***>(pointerArray))[index], true };
 }

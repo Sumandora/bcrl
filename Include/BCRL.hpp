@@ -22,13 +22,13 @@ namespace BCRL {
 
 	public:
 		MemoryRegionStorage();
-		bool Update(); // To update memory regions call this (for example on dlopen/dlclose calls)
+		bool update(); // To update memory regions call this (for example on dlopen/dlclose calls)
 
-		std::vector<MemoryRegion> GetMemoryRegions(
+		std::vector<MemoryRegion> getMemoryRegions(
 			std::optional<bool> writable = std::nullopt,
 			std::optional<bool> executable = std::nullopt,
 			std::optional<std::string> name = std::nullopt) const;
-		const MemoryRegion* AddressRegion(void* address) const;
+		const MemoryRegion* addressRegion(void* address) const;
 
 	} memoryRegionStorage;
 
@@ -55,53 +55,55 @@ namespace BCRL {
 		{
 		}
 
+		bool isValid(std::size_t length = 1) const;
+
 		template <typename T>
-		inline std::optional<T> Read() const
+		inline std::optional<T> read() const
 		{
-			if (IsValid(sizeof(T*)))
+			if (isValid(sizeof(T*)))
 				return *(T*)pointer;
 			return std::nullopt;
 		}
 
 		template <typename T>
-		inline bool Equals(T operand) const
+		inline bool equals(T operand) const
 		{
-			std::optional<T> read = Read<T>();
-			if (read.has_value())
-				return read.value() == operand;
+			std::optional<T> object = read<T>();
+			if (object.has_value())
+				return object.value() == operand;
 			return false;
 		}
 
-		SafePointer Invalidate() const;
+		SafePointer invalidate() const;
 
 		// Manipulation
-		SafePointer Add(std::size_t operand) const;
-		SafePointer Sub(std::size_t operand) const;
-		SafePointer Dereference() const;
+		SafePointer add(std::size_t operand) const;
+		SafePointer sub(std::size_t operand) const;
+		SafePointer dereference() const;
 
 		// Safety
-		inline SafePointer SetSafe(bool safe) const { return { this->pointer, IsSafe() }; }
-		inline bool IsSafe() const { return safe; }
-		inline SafePointer ToggleSafety() const { return { this->pointer, !IsSafe() }; }
+		inline SafePointer setSafe(bool safe) const { return { this->pointer, isSafe() }; }
+		inline bool isSafe() const { return safe; }
+		inline SafePointer toggleSafety() const { return { this->pointer, !isSafe() }; }
 
 		// X86
 #if defined(__x86_64) || defined(i386)
-		SafePointer RelativeToAbsolute() const;
+		SafePointer relativeToAbsolute() const;
 
-		SafePointer PrevInstruction() const; // WARNING: X86 can't be disassembled backwards properly, use with caution
-		SafePointer NextInstruction() const;
+		SafePointer prevInstruction() const; // WARNING: X86 can't be disassembled backwards properly, use with caution
+		SafePointer nextInstruction() const;
 
-		std::vector<SafePointer> FindXREFs(bool relative = true, bool absolute = true) const; // Since there can be multiple xrefs, this can increase the amount of addresses
-		std::vector<SafePointer> FindXREFs(const std::string& moduleName, bool relative = true, bool absolute = true) const;
+		std::vector<SafePointer> findXREFs(bool relative = true, bool absolute = true) const; // Since there can be multiple xrefs, this can increase the amount of addresses
+		std::vector<SafePointer> findXREFs(const std::string& moduleName, bool relative = true, bool absolute = true) const;
 #endif
 		// Signatures
-		SafePointer PrevByteOccurence(const std::string& signature, std::optional<bool> code = std::nullopt) const; // Last occurence of signature
-		SafePointer NextByteOccurence(const std::string& signature, std::optional<bool> code = std::nullopt) const; // Next occurence of signature
-		bool DoesMatch(const std::string& signature) const; // Tests if the given signature matches the current address
+		SafePointer prevByteOccurence(const std::string& signature, std::optional<bool> code = std::nullopt) const; // Last occurence of signature
+		SafePointer nextByteOccurence(const std::string& signature, std::optional<bool> code = std::nullopt) const; // Next occurence of signature
+		bool doesMatch(const std::string& signature) const; // Tests if the given signature matches the current address
 
 		// Strings
-		SafePointer PrevStringOccurence(const std::string& string, std::optional<bool> code = std::nullopt) const; // Prev occurence of string
-		SafePointer NextStringOccurence(const std::string& string, std::optional<bool> code = std::nullopt) const; // Next occurence of string
+		SafePointer prevStringOccurence(const std::string& string, std::optional<bool> code = std::nullopt) const; // Prev occurence of string
+		SafePointer nextStringOccurence(const std::string& string, std::optional<bool> code = std::nullopt) const; // Next occurence of string
 
 		inline std::strong_ordering operator<=>(const SafePointer& other) const
 		{
@@ -114,9 +116,7 @@ namespace BCRL {
 			return reinterpret_cast<std::uintptr_t>(pointer) == reinterpret_cast<std::uintptr_t>(other.pointer);
 		}
 
-		bool IsValid(std::size_t length = 1) const;
-
-		inline void* GetPointer() const
+		inline void* getPointer() const
 		{
 			return pointer;
 		};
@@ -132,7 +132,7 @@ namespace BCRL {
 			, safe(safe)
 		{
 			for (SafePointer& pointer : this->pointers) {
-				pointer = pointer.SetSafe(safe);
+				pointer = pointer.setSafe(safe);
 			}
 		}
 		inline Session(std::vector<void*> pointers, bool safe)
@@ -154,55 +154,55 @@ namespace BCRL {
 		Session() = delete;
 
 		// Openers
-		static Session Signature(const char* signature, std::optional<bool> code = std::nullopt);
-		static Session Module(const char* moduleName);
-		static Session String(const char* string);
-		static Session PointerList(std::vector<void*> pointers);
-		static Session Pointer(void* pointer);
-		static Session ArrayPointer(void* pointerArray, std::size_t index); // e.g. Virtual function tables
+		static Session signature(const char* signature, std::optional<bool> code = std::nullopt);
+		static Session module(const char* moduleName);
+		static Session string(const char* string);
+		static Session pointerList(std::vector<void*> pointers);
+		static Session pointer(void* pointer);
+		static Session arrayPointer(void* pointerArray, std::size_t index); // e.g. Virtual function tables
 
 		// Manipulation
-		Session Add(std::size_t operand);
-		Session Sub(std::size_t operand);
-		Session Dereference();
+		Session add(std::size_t operand);
+		Session sub(std::size_t operand);
+		Session dereference();
 
 		// Safety
-		Session SetSafe(bool safe);
-		inline bool IsSafe() { return safe; }
-		Session ToggleSafety();
+		Session setSafe(bool safe);
+		inline bool isSafe() { return safe; }
+		Session toggleSafety();
 
 		// X86
 #if defined(__x86_64) || defined(i386)
-		Session RelativeToAbsolute();
+		Session relativeToAbsolute();
 
-		Session PrevInstruction(); // WARNING: X86 can't be disassembled backwards properly, use with caution
-		Session NextInstruction();
+		Session prevInstruction(); // WARNING: X86 can't be disassembled backwards properly, use with caution
+		Session nextInstruction();
 
-		Session FindXREFs(bool relative = true, bool absolute = true); // Since there can be multiple xrefs, this can increase the amount of addresses
-		Session FindXREFs(const std::string& moduleName, bool relative = true, bool absolute = true);
+		Session findXREFs(bool relative = true, bool absolute = true); // Since there can be multiple xrefs, this can increase the amount of addresses
+		Session findXREFs(const std::string& moduleName, bool relative = true, bool absolute = true);
 #endif
 		// Signatures
-		Session PrevByteOccurence(const std::string& signature, std::optional<bool> code = std::nullopt); // Prev occurence of signature
-		Session NextByteOccurence(const std::string& signature, std::optional<bool> code = std::nullopt); // Next occurence of signature
+		Session prevByteOccurence(const std::string& signature, std::optional<bool> code = std::nullopt); // Prev occurence of signature
+		Session nextByteOccurence(const std::string& signature, std::optional<bool> code = std::nullopt); // Next occurence of signature
 
 		// Strings
-		Session PrevStringOccurence(const std::string& string); // Prev occurence of string
-		Session NextStringOccurence(const std::string& string); // Next occurence of string
+		Session prevStringOccurence(const std::string& string); // Prev occurence of string
+		Session nextStringOccurence(const std::string& string); // Next occurence of string
 
 		// Advanced Flow
-		Session PurgeInvalid(std::size_t length = 1); // Will purge all pointers, which can't be dereferenced
-		Session ForEach(std::function<void(SafePointer&)> action);
-		Session Repeater(std::function<bool(SafePointer&)> action); // Repeats action until false is returned
-		Session Repeater(std::size_t iterations, std::function<void(SafePointer&)> action); // Repeats action `iterations` times
-		Session Filter(std::function<bool(SafePointer)> predicate); // Filters out non-conforming pointers
-		Session Map(std::function<std::optional<SafePointer>(SafePointer)> transformer, bool purgeInvalid = true); // Maps pointer to other pointer (nullopts will be removed)
-		Session Map(std::function<std::vector<SafePointer>(SafePointer)> transformer, bool purgeInvalid = true); // Maps pointer to other pointers (nullopts will be removed)
+		Session purgeInvalid(std::size_t length = 1); // Will purge all pointers, which can't be dereferenced
+		Session forEach(std::function<void(SafePointer&)> action);
+		Session repeater(std::function<bool(SafePointer&)> action); // Repeats action until false is returned
+		Session repeater(std::size_t iterations, std::function<void(SafePointer&)> action); // Repeats action `iterations` times
+		Session filter(std::function<bool(SafePointer)> predicate); // Filters out non-conforming pointers
+		Session map(std::function<std::optional<SafePointer>(SafePointer)> transformer, bool purgeInvalid = true); // Maps pointer to other pointer (nullopts will be removed)
+		Session map(std::function<std::vector<SafePointer>(SafePointer)> transformer, bool purgeInvalid = true); // Maps pointer to other pointers (nullopts will be removed)
 
 		// Finalizing
-		inline std::size_t Size() { return pointers.size(); }
-		std::vector<void*> Pointers();
-		std::optional<void*> Choose(std::function<bool(SafePointer)> predicate); // Returns the first chosen pointer
-		std::optional<void*> Pointer(); // Will return std::nullopt if there are no/multiple pointers available
+		inline std::size_t size() { return pointers.size(); }
+		std::vector<void*> getPointers();
+		std::optional<void*> choose(std::function<bool(SafePointer)> predicate); // Returns the first chosen pointer
+		std::optional<void*> getPointer(); // Will return std::nullopt if there are no/multiple pointers available
 	};
 }
 

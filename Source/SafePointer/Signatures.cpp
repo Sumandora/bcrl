@@ -4,11 +4,11 @@
 
 #include "SignatureScanner.hpp"
 
-BCRL::SafePointer BCRL::SafePointer::PrevByteOccurence(const std::string& signature, std::optional<bool> code) const
+BCRL::SafePointer BCRL::SafePointer::prevByteOccurence(const std::string& signature, std::optional<bool> code) const
 {
 	SignatureScanner::ByteSignature convertedSignature{ signature };
 
-	for (const MemoryRegionStorage::MemoryRegion& memoryRegion : std::ranges::views::reverse(memoryRegionStorage.GetMemoryRegions(std::nullopt, code))) {
+	for (const MemoryRegionStorage::MemoryRegion& memoryRegion : std::ranges::views::reverse(memoryRegionStorage.getMemoryRegions(std::nullopt, code))) {
 		if (&memoryRegion.addressSpace.front() > pointer)
 			continue;
 
@@ -17,17 +17,17 @@ BCRL::SafePointer BCRL::SafePointer::PrevByteOccurence(const std::string& signat
 		if (!hit)
 			continue;
 
-		return { hit, IsSafe() };
+		return { hit, isSafe() };
 	}
 
-	return Invalidate();
+	return invalidate();
 }
 
-BCRL::SafePointer BCRL::SafePointer::NextByteOccurence(const std::string& signature, std::optional<bool> code) const
+BCRL::SafePointer BCRL::SafePointer::nextByteOccurence(const std::string& signature, std::optional<bool> code) const
 {
 	SignatureScanner::ByteSignature convertedSignature{ signature };
 
-	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.GetMemoryRegions(std::nullopt, code)) {
+	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.getMemoryRegions(std::nullopt, code)) {
 		if (&fileMapping.addressSpace.back() < pointer)
 			continue;
 
@@ -36,16 +36,16 @@ BCRL::SafePointer BCRL::SafePointer::NextByteOccurence(const std::string& signat
 		if (!hit)
 			continue;
 
-		return { hit, IsSafe() };
+		return { hit, isSafe() };
 	}
 
-	return Invalidate();
+	return invalidate();
 }
 
-bool BCRL::SafePointer::DoesMatch(const std::string& signature) const
+bool BCRL::SafePointer::doesMatch(const std::string& signature) const
 {
 	SignatureScanner::ByteSignature convertedSignature{ signature };
-	if (IsValid(convertedSignature.length()))
+	if (isValid(convertedSignature.length()))
 		return convertedSignature.doesMatch<void*>(pointer);
 	return false;
 }
