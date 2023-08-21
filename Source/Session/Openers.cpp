@@ -2,7 +2,9 @@
 
 #include "SignatureScanner.hpp"
 
-BCRL::Session BCRL::Session::module(const char* moduleName)
+using namespace BCRL;
+
+Session Session::module(const char* moduleName)
 {
 	memoryRegionStorage.update();
 	std::vector<MemoryRegionStorage::MemoryRegion> memoryRegions = memoryRegionStorage.getMemoryRegions(std::nullopt, std::nullopt, moduleName);
@@ -11,7 +13,7 @@ BCRL::Session BCRL::Session::module(const char* moduleName)
 	return { &memoryRegions[0].addressSpace.front(), true };
 }
 
-BCRL::Session BCRL::Session::string(const char* string)
+Session Session::string(const char* string)
 {
 	memoryRegionStorage.update();
 	std::vector<void*> pointers{};
@@ -26,7 +28,7 @@ BCRL::Session BCRL::Session::string(const char* string)
 	return { pointers, true };
 }
 
-BCRL::Session BCRL::Session::signature(const char* signature, std::optional<bool> code)
+Session Session::signature(const char* signature, std::optional<bool> code)
 {
 	memoryRegionStorage.update();
 	std::vector<void*> pointers{};
@@ -41,19 +43,19 @@ BCRL::Session BCRL::Session::signature(const char* signature, std::optional<bool
 	return { pointers, true };
 }
 
-BCRL::Session BCRL::Session::pointerList(std::vector<void*> pointers)
+Session Session::pointerList(std::vector<void*> pointers)
 {
 	memoryRegionStorage.update();
 	return { pointers, true };
 }
 
-BCRL::Session BCRL::Session::pointer(void* pointer)
+Session Session::pointer(void* pointer)
 {
 	memoryRegionStorage.update();
 	return { pointer, true };
 }
 
-BCRL::Session BCRL::Session::arrayPointer(void* pointerArray, std::size_t index)
+Session Session::arrayPointer(void* pointerArray, std::size_t index)
 {
 	memoryRegionStorage.update();
 	return { (*reinterpret_cast<void***>(pointerArray))[index], true };

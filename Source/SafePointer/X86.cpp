@@ -2,9 +2,11 @@
 
 #include "SignatureScanner.hpp"
 
+using namespace BCRL;
+
 #if defined(__x86_64) || defined(i386)
 
-BCRL::SafePointer BCRL::SafePointer::relativeToAbsolute() const
+SafePointer SafePointer::relativeToAbsolute() const
 {
 #ifdef __x86_64
 	std::optional<int32_t> offset = read<int32_t>();
@@ -25,7 +27,7 @@ BCRL::SafePointer BCRL::SafePointer::relativeToAbsolute() const
 
 constexpr std::size_t longestX86Insn = 15;
 
-BCRL::SafePointer BCRL::SafePointer::prevInstruction() const
+SafePointer SafePointer::prevInstruction() const
 {
 	// What I am doing here has no scientific backing, it just happens to work **most** of the time.
 	for (std::size_t offset = longestX86Insn * 2 /* Ensure we will pass a few instructions */; offset > 0; offset--) {
@@ -44,7 +46,7 @@ BCRL::SafePointer BCRL::SafePointer::prevInstruction() const
 	return invalidate();
 }
 
-BCRL::SafePointer BCRL::SafePointer::nextInstruction() const
+SafePointer SafePointer::nextInstruction() const
 {
 	if (isValid(longestX86Insn))
 		return add(ldisasm(pointer, sizeof(void*) == 8));
@@ -53,9 +55,9 @@ BCRL::SafePointer BCRL::SafePointer::nextInstruction() const
 }
 #endif
 
-std::vector<BCRL::SafePointer> BCRL::SafePointer::findXREFs(bool relative, bool absolute) const
+std::vector<SafePointer> SafePointer::findXREFs(bool relative, bool absolute) const
 {
-	std::vector<BCRL::SafePointer> newPointers{};
+	std::vector<SafePointer> newPointers{};
 
 	SignatureScanner::XRefSignature signature(this->pointer);
 	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.getMemoryRegions(std::nullopt, true)) {
@@ -67,9 +69,9 @@ std::vector<BCRL::SafePointer> BCRL::SafePointer::findXREFs(bool relative, bool 
 	return newPointers;
 }
 
-std::vector<BCRL::SafePointer> BCRL::SafePointer::findXREFs(const std::string& moduleName, bool relative, bool absolute) const
+std::vector<SafePointer> SafePointer::findXREFs(const std::string& moduleName, bool relative, bool absolute) const
 {
-	std::vector<BCRL::SafePointer> newPointers{};
+	std::vector<SafePointer> newPointers{};
 
 	SignatureScanner::XRefSignature signature(this->pointer);
 	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.getMemoryRegions(std::nullopt, true, moduleName)) {

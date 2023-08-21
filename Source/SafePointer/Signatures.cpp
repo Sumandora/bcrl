@@ -4,7 +4,9 @@
 
 #include "SignatureScanner.hpp"
 
-BCRL::SafePointer BCRL::SafePointer::prevByteOccurence(const std::string& signature, std::optional<bool> code) const
+using namespace BCRL;
+
+SafePointer SafePointer::prevByteOccurence(const std::string& signature, std::optional<bool> code) const
 {
 	SignatureScanner::ByteSignature convertedSignature{ signature };
 
@@ -23,7 +25,7 @@ BCRL::SafePointer BCRL::SafePointer::prevByteOccurence(const std::string& signat
 	return invalidate();
 }
 
-BCRL::SafePointer BCRL::SafePointer::nextByteOccurence(const std::string& signature, std::optional<bool> code) const
+SafePointer SafePointer::nextByteOccurence(const std::string& signature, std::optional<bool> code) const
 {
 	SignatureScanner::ByteSignature convertedSignature{ signature };
 
@@ -42,7 +44,7 @@ BCRL::SafePointer BCRL::SafePointer::nextByteOccurence(const std::string& signat
 	return invalidate();
 }
 
-bool BCRL::SafePointer::doesMatch(const std::string& signature) const
+bool SafePointer::doesMatch(const std::string& signature) const
 {
 	SignatureScanner::ByteSignature convertedSignature{ signature };
 	if (isValid(convertedSignature.length()))
