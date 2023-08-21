@@ -1,16 +1,33 @@
 #include "BCRL.hpp"
 
+#include <unordered_set>
+
 using namespace BCRL;
+
+// We don't use filter for these two, because we need to prevent the infinite loop
+
+Session Session::purgeDuplicates()
+{
+	std::unordered_set<void*> pointers{};
+	return map([&pointers](SafePointer safePointer) -> std::optional<SafePointer> {
+		if (!pointers.contains(safePointer.getPointer())) {
+			pointers.insert(safePointer.getPointer());
+			return safePointer;
+		} else
+			return std::nullopt;
+	},
+		false, false); // Don't purge duplicates after this map call, that would lead to a infinite loop
+}
 
 Session Session::purgeInvalid(std::size_t length)
 {
-	// TODO Purge duplicates
 	return map([length](SafePointer safePointer) -> std::optional<SafePointer> {
 		if (safePointer.isValid(length))
 			return safePointer;
-		return std::nullopt;
+		else
+			return std::nullopt;
 	},
-		false); // Don't purge invalids after this map call, that would lead to a infinite loop
+		false, false); // Don't purge invalids after this map call, that would lead to a infinite loop
 }
 
 Session Session::forEach(std::function<void(SafePointer&)> action)
@@ -50,7 +67,7 @@ Session Session::filter(std::function<bool(SafePointer)> predicate)
 	});
 }
 
-Session Session::map(std::function<std::optional<SafePointer>(SafePointer)> transformer, bool purgeInvalid)
+Session Session::map(std::function<std::optional<SafePointer>(SafePointer)> transformer, bool purgeInvalid, bool purgeDuplicates)
 {
 	std::vector<SafePointer> newPointers{};
 	for (SafePointer safePointer : pointers) {
@@ -60,11 +77,13 @@ Session Session::map(std::function<std::optional<SafePointer>(SafePointer)> tran
 	}
 	Session session{ newPointers, isSafe() };
 	if (purgeInvalid)
-		return session.purgeInvalid();
+		session = session.purgeInvalid();
+	if (purgeDuplicates)
+		session = session.purgeDuplicates();
 	return session;
 }
 
-Session Session::map(std::function<std::vector<SafePointer>(SafePointer)> transformer, bool purgeInvalid)
+Session Session::map(std::function<std::vector<SafePointer>(SafePointer)> transformer, bool purgeInvalid, bool purgeDuplicates)
 {
 	std::vector<SafePointer> newPointers{};
 	for (SafePointer safePointer : pointers) {
@@ -75,6 +94,8 @@ Session Session::map(std::function<std::vector<SafePointer>(SafePointer)> transf
 	}
 	Session session{ newPointers, isSafe() };
 	if (purgeInvalid)
-		return session.purgeInvalid();
+		session = session.purgeInvalid();
+	if (purgeDuplicates)
+		session = session.purgeDuplicates();
 	return session;
 }

@@ -190,13 +190,14 @@ namespace BCRL {
 		Session nextStringOccurence(const std::string& string); // Next occurence of string
 
 		// Advanced Flow
+		Session purgeDuplicates();
 		Session purgeInvalid(std::size_t length = 1); // Will purge all pointers, which can't be dereferenced
 		Session forEach(std::function<void(SafePointer&)> action);
 		Session repeater(std::function<bool(SafePointer&)> action); // Repeats action until false is returned
 		Session repeater(std::size_t iterations, std::function<void(SafePointer&)> action); // Repeats action `iterations` times
 		Session filter(std::function<bool(SafePointer)> predicate); // Filters out non-conforming pointers
-		Session map(std::function<std::optional<SafePointer>(SafePointer)> transformer, bool purgeInvalid = true); // Maps pointer to other pointer (nullopts will be removed)
-		Session map(std::function<std::vector<SafePointer>(SafePointer)> transformer, bool purgeInvalid = true); // Maps pointer to other pointers (nullopts will be removed)
+		Session map(std::function<std::optional<SafePointer>(SafePointer)> transformer, bool purgeInvalid = true, bool purgeDuplicates = true); // Maps pointer to other pointer (nullopts will be removed)
+		Session map(std::function<std::vector<SafePointer>(SafePointer)> transformer, bool purgeInvalid = true, bool purgeDuplicates = true); // Maps pointer to other pointers (nullopts will be removed)
 
 		// Finalizing
 		inline std::size_t size() { return pointers.size(); }
