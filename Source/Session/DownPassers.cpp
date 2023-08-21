@@ -43,7 +43,6 @@ BCRL::Session BCRL::Session::RelativeToAbsolute()
 	});
 }
 
-#ifndef BCLR_DISABLE_LDE
 BCRL::Session BCRL::Session::PrevInstruction()
 {
 	return Map([](SafePointer safePointer) {
@@ -56,7 +55,6 @@ BCRL::Session BCRL::Session::NextInstruction()
 		return safePointer.NextInstruction();
 	});
 }
-#endif
 
 BCRL::Session BCRL::Session::FindXREFs(bool relative, bool absolute)
 {

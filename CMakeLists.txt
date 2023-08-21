@@ -1,35 +1,35 @@
 cmake_minimum_required(VERSION 3.20)
 project(bcrl)
 
-set(CMAKE_CXX_STANDARD 23)
-
-set(CMAKE_CXX_FLAGS "-ggdb3")
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-add_library(bcrl STATIC)
 file(GLOB_RECURSE BCRL_SOURCE_FILES "${PROJECT_SOURCE_DIR}/Source/*.cpp")
-target_sources(bcrl PRIVATE ${BCRL_SOURCE_FILES})
+add_library(bcrl STATIC ${BCRL_SOURCE_FILES})
 target_include_directories(bcrl PUBLIC "${PROJECT_SOURCE_DIR}/Include")
+target_compile_options(bcrl PRIVATE "-Ofast")
+target_compile_features(bcrl PRIVATE cxx_std_20)
 
-if (NOT (TARGET SignatureScanner))
-    add_subdirectory("${PROJECT_SOURCE_DIR}/Dependencies/SignatureScanner")
-endif ()
+include(FetchContent)
+
+FetchContent_Declare(SignatureScanner
+	GIT_REPOSITORY https://github.com/Sumandora/SignatureScanner
+	GIT_PROGRESS TRUE
+	GIT_SHALLOW TRUE
+	GIT_TAG 710490d)
+FetchContent_MakeAvailable(SignatureScanner)
 target_link_libraries(bcrl PRIVATE SignatureScanner)
 
-if (NOT (TARGET length-disassembler))
-    add_subdirectory("${PROJECT_SOURCE_DIR}/Dependencies/length-disassembler")
-endif ()
+FetchContent_Declare(LengthDisassembler
+	GIT_REPOSITORY https://github.com/Jovvik/length-disassembler
+	GIT_PROGRESS TRUE
+	GIT_SHALLOW TRUE
+	GIT_TAG 88fd89c)
+FetchContent_MakeAvailable(LengthDisassembler)
 target_link_libraries(bcrl PRIVATE length-disassembler)
 
-# When using this you won't have the length disassembler to step through instructions
-#target_compile_definitions(bcrl PUBLIC BCLR_DISABLE_LDE)
+if(PROJECT_IS_TOP_LEVEL)
+	add_executable(bcrlExample "${PROJECT_SOURCE_DIR}/Example/Main.cpp")
+	target_link_libraries(bcrlExample PRIVATE bcrl)
+	target_compile_features(bcrlExample PRIVATE cxx_std_20) # The header uses <span> which is c++20
 
-target_compile_definitions(bcrl PRIVATE SIGNATURESCANNER_ENABLE_IDA_SEARCH)
-target_compile_definitions(bcrl PRIVATE SIGNATURESCANNER_ENABLE_STRING_SEARCH)
-target_compile_definitions(bcrl PRIVATE SIGNATURESCANNER_ENABLE_XREF_SEARCH)
-
-add_executable(bcrlExample "${PROJECT_SOURCE_DIR}/Example/Main.cpp")
-target_link_libraries(bcrlExample PRIVATE bcrl)
-
-enable_testing()
-add_test(NAME bcrlExample COMMAND $<TARGET_FILE:bcrlExample>)
+	enable_testing()
+	add_test(NAME bcrlExample COMMAND $<TARGET_FILE:bcrlExample>)
+endif()

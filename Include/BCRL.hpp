@@ -88,10 +88,9 @@ namespace BCRL {
 #if defined(__x86_64) || defined(i386)
 		SafePointer RelativeToAbsolute() const;
 
-#ifndef BCLR_DISABLE_LDE
 		SafePointer PrevInstruction() const; // WARNING: X86 can't be disassembled backwards properly, use with caution
 		SafePointer NextInstruction() const;
-#endif
+
 		std::vector<SafePointer> FindXREFs(bool relative = true, bool absolute = true) const; // Since there can be multiple xrefs, this can increase the amount of addresses
 		std::vector<SafePointer> FindXREFs(const std::string& moduleName, bool relative = true, bool absolute = true) const;
 #endif
@@ -176,10 +175,9 @@ namespace BCRL {
 #if defined(__x86_64) || defined(i386)
 		Session RelativeToAbsolute();
 
-#ifndef BCLR_DISABLE_LDE
 		Session PrevInstruction(); // WARNING: X86 can't be disassembled backwards properly, use with caution
 		Session NextInstruction();
-#endif
+
 		Session FindXREFs(bool relative = true, bool absolute = true); // Since there can be multiple xrefs, this can increase the amount of addresses
 		Session FindXREFs(const std::string& moduleName, bool relative = true, bool absolute = true);
 #endif

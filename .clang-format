@@ -1,0 +1,12 @@
+---
+BasedOnStyle: WebKit
+NamespaceIndentation: All
+SortIncludes: CaseInsensitive
+TabWidth: 4
+UseTab: Always
+PointerAlignment: Left
+ReferenceAlignment: Left
+DerivePointerAlignment: false
+AlignEscapedNewlines: Right
+QualifierAlignment: Left
+SpaceBeforeCpp11BracedList: false

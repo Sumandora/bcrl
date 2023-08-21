@@ -12,7 +12,7 @@ BCRL::SafePointer BCRL::SafePointer::PrevStringOccurence(const std::string& stri
 		if (&memoryRegion.addressSpace.front() > pointer)
 			continue;
 
-		void* hit = signature.FindPrev<void*>(std::min(reinterpret_cast<char*>(pointer), reinterpret_cast<char*>(&memoryRegion.addressSpace.back())), &memoryRegion.addressSpace.front());
+		void* hit = signature.findPrev<void*>(std::min(reinterpret_cast<char*>(pointer), reinterpret_cast<char*>(&memoryRegion.addressSpace.back())), &memoryRegion.addressSpace.front());
 
 		if (!hit)
 			continue;
@@ -31,7 +31,7 @@ BCRL::SafePointer BCRL::SafePointer::NextStringOccurence(const std::string& stri
 		if (&fileMapping.addressSpace.back() < pointer)
 			continue;
 
-		void* hit = signature.FindNext<void*>(std::max(reinterpret_cast<char*>(pointer), reinterpret_cast<char*>(&fileMapping.addressSpace.front())), &fileMapping.addressSpace.back());
+		void* hit = signature.findNext<void*>(std::max(reinterpret_cast<char*>(pointer), reinterpret_cast<char*>(&fileMapping.addressSpace.front())), &fileMapping.addressSpace.back());
 
 		if (!hit)
 			continue;

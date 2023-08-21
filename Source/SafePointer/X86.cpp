@@ -59,7 +59,7 @@ std::vector<BCRL::SafePointer> BCRL::SafePointer::FindXREFs(bool relative, bool 
 
 	SignatureScanner::XRefSignature signature(this->pointer);
 	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.GetMemoryRegions(std::nullopt, true)) {
-		for (void* ptr : signature.FindAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
+		for (void* ptr : signature.findAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
 			newPointers.push_back(SafePointer{ ptr, IsSafe() });
 		}
 	}
@@ -73,7 +73,7 @@ std::vector<BCRL::SafePointer> BCRL::SafePointer::FindXREFs(const std::string& m
 
 	SignatureScanner::XRefSignature signature(this->pointer);
 	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.GetMemoryRegions(std::nullopt, true, moduleName)) {
-		for (void* ptr : signature.FindAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
+		for (void* ptr : signature.findAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
 			newPointers.push_back(SafePointer{ ptr, IsSafe() });
 		}
 	}

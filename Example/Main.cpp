@@ -12,14 +12,14 @@
 // Notice how I am calling functions which haven't been declared yet
 int main()
 {
-	const char* newString = strdup("You will never find me!"); // The compiler reuses strings when possible
+	const char* newString = strdup("You will never find me!"); // The compiler reuses strings when possible, so we duplicate it to force our library not to cheat
 
 	auto session = BCRL::Session::String(newString)
-					   .FindXREFs("bcrlExample", true, false) // main and SuperSecretMethod
+					   .FindXREFs("bcrlExample" /*We know the executable name, no point in searching somewhere else*/, true, false) // main and SuperSecretMethod
 					   .Add(4)
 					   .Repeater([](BCRL::SafePointer& ptr) { ptr = ptr.NextInstruction(); return !ptr.Equals<unsigned char>('\xe8'); }) // Find next call instruction
 					   .Add(5)
-					   .Filter([](BCRL::SafePointer ptr) { return ptr.Equals<unsigned char>('\xe8'); }) // Verify that we have another call instruction here (This will remove main from the options)
+					   .Filter([](BCRL::SafePointer ptr) { return ptr.Equals<unsigned char>('\xe8'); }) // Verify that we have another call instruction here (This will remove the main method from the pool)
 					   .Add(1)
 					   .RelativeToAbsolute()
 					   .NextByteOccurence("c3") // Go to return
@@ -40,7 +40,7 @@ int main()
 	const char* interjection = "I'd just like to interject for moment.";
 	strcpy(str, interjection); // Get Stallman'd
 
-	func();
+	func(); // Invoke 'AnotherSecretMethod', but its string has been overwritten, so we get the GNU Linux interjection
 }
 
 void AnotherSecretMethod();

@@ -18,7 +18,7 @@ BCRL::Session BCRL::Session::String(const char* string)
 	SignatureScanner::StringSignature signature{ string };
 
 	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.GetMemoryRegions()) {
-		for (void* ptr : signature.FindAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
+		for (void* ptr : signature.findAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
 			pointers.push_back(ptr);
 		}
 	}
@@ -33,7 +33,7 @@ BCRL::Session BCRL::Session::Signature(const char* signature, std::optional<bool
 	SignatureScanner::ByteSignature convertedSignature{ signature };
 
 	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.GetMemoryRegions(std::nullopt, code)) {
-		for (void* ptr : convertedSignature.FindAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
+		for (void* ptr : convertedSignature.findAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
 			pointers.push_back(ptr);
 		}
 	}

@@ -12,7 +12,7 @@ BCRL::SafePointer BCRL::SafePointer::PrevByteOccurence(const std::string& signat
 		if (&memoryRegion.addressSpace.front() > pointer)
 			continue;
 
-		void* hit = convertedSignature.FindPrev<void*>(std::min(reinterpret_cast<char*>(pointer), reinterpret_cast<char*>(&memoryRegion.addressSpace.back())), &memoryRegion.addressSpace.front());
+		void* hit = convertedSignature.findPrev<void*>(std::min(reinterpret_cast<char*>(pointer), reinterpret_cast<char*>(&memoryRegion.addressSpace.back())), &memoryRegion.addressSpace.front());
 
 		if (!hit)
 			continue;
@@ -31,7 +31,7 @@ BCRL::SafePointer BCRL::SafePointer::NextByteOccurence(const std::string& signat
 		if (&fileMapping.addressSpace.back() < pointer)
 			continue;
 
-		void* hit = convertedSignature.FindNext<void*>(std::max(reinterpret_cast<char*>(pointer), reinterpret_cast<char*>(&fileMapping.addressSpace.front())), &fileMapping.addressSpace.back());
+		void* hit = convertedSignature.findNext<void*>(std::max(reinterpret_cast<char*>(pointer), reinterpret_cast<char*>(&fileMapping.addressSpace.front())), &fileMapping.addressSpace.back());
 
 		if (!hit)
 			continue;
@@ -45,7 +45,7 @@ BCRL::SafePointer BCRL::SafePointer::NextByteOccurence(const std::string& signat
 bool BCRL::SafePointer::DoesMatch(const std::string& signature) const
 {
 	SignatureScanner::ByteSignature convertedSignature{ signature };
-	if (IsValid(convertedSignature.Length()))
-		return convertedSignature.DoesMatch<void*>(pointer);
+	if (IsValid(convertedSignature.length()))
+		return convertedSignature.doesMatch<void*>(pointer);
 	return false;
 }
