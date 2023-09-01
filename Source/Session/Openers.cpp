@@ -43,7 +43,7 @@ Session Session::signature(const char* signature, std::optional<bool> code)
 	return { pointers, true };
 }
 
-Session Session::pointerList(std::vector<void*> pointers)
+Session Session::pointerList(const std::vector<void*>& pointers)
 {
 	memoryRegionStorage.update();
 	return { pointers, true };

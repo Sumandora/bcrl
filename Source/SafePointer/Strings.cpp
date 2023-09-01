@@ -6,7 +6,7 @@
 
 using namespace BCRL;
 
-SafePointer SafePointer::prevStringOccurence(const std::string& string, std::optional<bool> code) const
+SafePointer SafePointer::prevStringOccurrence(const std::string& string, std::optional<bool> code) const
 {
 	SignatureScanner::StringSignature signature{ string };
 
@@ -25,7 +25,7 @@ SafePointer SafePointer::prevStringOccurence(const std::string& string, std::opt
 	return invalidate();
 }
 
-SafePointer SafePointer::nextStringOccurence(const std::string& string, std::optional<bool> code) const
+SafePointer SafePointer::nextStringOccurrence(const std::string& string, std::optional<bool> code) const
 {
 	SignatureScanner::StringSignature signature{ string };
 

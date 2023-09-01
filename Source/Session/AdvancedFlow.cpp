@@ -30,7 +30,7 @@ Session Session::purgeInvalid(std::size_t length)
 		false, false); // Don't purge invalids after this map call, that would lead to a infinite loop
 }
 
-Session Session::forEach(std::function<void(SafePointer&)> action)
+Session Session::forEach(const std::function<void(SafePointer&)>& action)
 {
 	return repeater([action](SafePointer& safePointer) {
 		action(safePointer);
@@ -38,7 +38,7 @@ Session Session::forEach(std::function<void(SafePointer&)> action)
 	});
 }
 
-Session Session::repeater(std::function<bool(SafePointer&)> action)
+Session Session::repeater(const std::function<bool(SafePointer&)>& action)
 {
 	return map([action](SafePointer safePointer) {
 		while (action(safePointer))
@@ -47,7 +47,7 @@ Session Session::repeater(std::function<bool(SafePointer&)> action)
 	});
 }
 
-Session Session::repeater(std::size_t iterations, std::function<void(SafePointer&)> action)
+Session Session::repeater(std::size_t iterations, const std::function<void(SafePointer&)>& action)
 {
 	return map([iterations, action](SafePointer safePointer) {
 		for (std::size_t i = 0; i < iterations; i++)
@@ -57,17 +57,17 @@ Session Session::repeater(std::size_t iterations, std::function<void(SafePointer
 	});
 }
 
-Session Session::filter(std::function<bool(SafePointer)> predicate)
+Session Session::filter(const std::function<bool(SafePointer)>& predicate)
 {
 	return map([predicate](SafePointer safePointer) -> std::optional<SafePointer> {
 		if (predicate(safePointer))
-			return std::optional<SafePointer>(safePointer);
+			return { safePointer };
 		else
 			return std::nullopt;
 	});
 }
 
-Session Session::map(std::function<std::optional<SafePointer>(SafePointer)> transformer, bool purgeInvalid, bool purgeDuplicates)
+Session Session::map(const std::function<std::optional<SafePointer>(SafePointer)>& transformer, bool purgeInvalid, bool purgeDuplicates)
 {
 	std::vector<SafePointer> newPointers{};
 	for (SafePointer safePointer : pointers) {
@@ -83,7 +83,7 @@ Session Session::map(std::function<std::optional<SafePointer>(SafePointer)> tran
 	return session;
 }
 
-Session Session::map(std::function<std::vector<SafePointer>(SafePointer)> transformer, bool purgeInvalid, bool purgeDuplicates)
+Session Session::map(const std::function<std::vector<SafePointer>(SafePointer)>& transformer, bool purgeInvalid, bool purgeDuplicates)
 {
 	std::vector<SafePointer> newPointers{};
 	for (SafePointer safePointer : pointers) {

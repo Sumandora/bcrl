@@ -73,28 +73,28 @@ Session Session::findXREFs(const std::string& moduleName, bool relative, bool ab
 }
 #endif
 
-Session Session::prevByteOccurence(const std::string& signature, std::optional<bool> code)
+Session Session::prevByteOccurrence(const std::string& signature, std::optional<bool> code)
 {
 	return map([&signature, &code](SafePointer safePointer) {
-		return safePointer.prevByteOccurence(signature);
+		return safePointer.prevByteOccurrence(signature, code);
 	});
 }
-Session Session::nextByteOccurence(const std::string& signature, std::optional<bool> code)
+Session Session::nextByteOccurrence(const std::string& signature, std::optional<bool> code)
 {
 	return map([&signature, &code](SafePointer safePointer) {
-		return safePointer.nextByteOccurence(signature, code);
+		return safePointer.nextByteOccurrence(signature, code);
 	});
 }
 
-Session Session::prevStringOccurence(const std::string& string)
+Session Session::prevStringOccurrence(const std::string& string)
 {
 	return map([&string](SafePointer safePointer) {
-		return safePointer.prevStringOccurence(string);
+		return safePointer.prevStringOccurrence(string);
 	});
 }
-Session Session::nextStringOccurence(const std::string& string)
+Session Session::nextStringOccurrence(const std::string& string)
 {
 	return map([&string](SafePointer safePointer) {
-		return safePointer.nextStringOccurence(string);
+		return safePointer.nextStringOccurrence(string);
 	});
 }

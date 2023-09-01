@@ -4,13 +4,13 @@ using namespace BCRL;
 
 std::vector<void*> Session::getPointers()
 {
-	std::vector<void*> pointers;
+	std::vector<void*> pointers{};
 	for (SafePointer safePointer : this->pointers)
 		pointers.push_back(safePointer.getPointer());
 	return pointers;
 }
 
-std::optional<void*> Session::choose(std::function<bool(SafePointer)> predicate)
+std::optional<void*> Session::first(const std::function<bool(SafePointer)>& predicate)
 {
 	for (SafePointer safePointer : this->pointers)
 		if (predicate(safePointer))

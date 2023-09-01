@@ -1,12 +1,8 @@
 #include "BCRL.hpp"
 
 #include <cstring>
-
 #include <sys/mman.h>
 #include <unistd.h>
-
-#include <iostream>
-
 #include <cassert>
 
 // Notice how I am calling functions which haven't been declared yet
@@ -23,14 +19,14 @@ int main()
 					   .filter([](SafePointer ptr) { return ptr.equals<unsigned char>('\xe8'); }) // Verify that we have another call instruction here (This will remove the main method from the pool)
 					   .add(1)
 					   .relativeToAbsolute()
-					   .nextByteOccurence("c3") // Go to return
-					   .prevByteOccurence("55 48 89 e5") // Go back to the method prolog
+					   .nextByteOccurrence("c3") // Go to return
+					   .prevByteOccurrence("55 48 89 e5") // Go back to the method prolog
 					   .forEach([](SafePointer ptr) { printf("anotherSecretMethod: %p\n", ptr.getPointer()); })
 					   .getPointer();
 
 	assert(session.has_value());
 
-	void (*func)() = (void (*)())session.value();
+	auto func = reinterpret_cast<void (*)()>(session.value());
 
 	auto stringSearch = Session::string(strdup("I really really really really really love Linux!")).getPointer();
 	assert(stringSearch.has_value());

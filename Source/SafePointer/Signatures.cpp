@@ -6,7 +6,7 @@
 
 using namespace BCRL;
 
-SafePointer SafePointer::prevByteOccurence(const std::string& signature, std::optional<bool> code) const
+SafePointer SafePointer::prevByteOccurrence(const std::string& signature, std::optional<bool> code) const
 {
 	SignatureScanner::ByteSignature convertedSignature{ signature };
 
@@ -25,7 +25,7 @@ SafePointer SafePointer::prevByteOccurence(const std::string& signature, std::op
 	return invalidate();
 }
 
-SafePointer SafePointer::nextByteOccurence(const std::string& signature, std::optional<bool> code) const
+SafePointer SafePointer::nextByteOccurrence(const std::string& signature, std::optional<bool> code) const
 {
 	SignatureScanner::ByteSignature convertedSignature{ signature };
 
