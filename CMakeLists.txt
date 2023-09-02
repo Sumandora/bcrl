@@ -12,7 +12,6 @@ include(FetchContent)
 FetchContent_Declare(SignatureScanner
 	GIT_REPOSITORY https://github.com/Sumandora/SignatureScanner
 	GIT_PROGRESS TRUE
-	GIT_SHALLOW TRUE
 	GIT_TAG e8f2b7b)
 FetchContent_MakeAvailable(SignatureScanner)
 target_link_libraries(bcrl SignatureScanner)
@@ -20,7 +19,6 @@ target_link_libraries(bcrl SignatureScanner)
 FetchContent_Declare(LengthDisassembler
 	GIT_REPOSITORY https://github.com/Jovvik/length-disassembler
 	GIT_PROGRESS TRUE
-	GIT_SHALLOW TRUE
 	GIT_TAG 88fd89c)
 FetchContent_MakeAvailable(LengthDisassembler)
 target_link_libraries(bcrl length-disassembler)
