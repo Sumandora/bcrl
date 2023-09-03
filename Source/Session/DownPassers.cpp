@@ -60,14 +60,14 @@ Session Session::nextInstruction()
 
 Session Session::findXREFs(bool relative, bool absolute)
 {
-	return map([relative, absolute](SafePointer safePointer) {
+	return flatMap([relative, absolute](SafePointer safePointer) {
 		return safePointer.findXREFs(relative, absolute);
 	});
 }
 
 Session Session::findXREFs(const std::string& moduleName, bool relative, bool absolute)
 {
-	return map([&moduleName, relative, absolute](SafePointer safePointer) {
+	return flatMap([&moduleName, relative, absolute](SafePointer safePointer) {
 		return safePointer.findXREFs(moduleName, relative, absolute);
 	});
 }

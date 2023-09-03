@@ -98,13 +98,13 @@ namespace BCRL {
 		[[nodiscard]] std::vector<SafePointer> findXREFs(const std::string& moduleName, bool relative = true, bool absolute = true) const;
 #endif
 		// Signatures
-		[[nodiscard]] SafePointer prevByteOccurrence(const std::string& signature, std::optional<bool> code = std::nullopt) const; // Last occurence of signature
-		[[nodiscard]] SafePointer nextByteOccurrence(const std::string& signature, std::optional<bool> code = std::nullopt) const; // Next occurence of signature
+		[[nodiscard]] SafePointer prevByteOccurrence(const std::string& signature, std::optional<bool> code = std::nullopt) const; // Last occurrence of signature
+		[[nodiscard]] SafePointer nextByteOccurrence(const std::string& signature, std::optional<bool> code = std::nullopt) const; // Next occurrence of signature
 		[[nodiscard]] bool doesMatch(const std::string& signature) const; // Tests if the given signature matches the current address
 
 		// Strings
-		[[nodiscard]] SafePointer prevStringOccurrence(const std::string& string, std::optional<bool> code = std::nullopt) const; // Prev occurence of string
-		[[nodiscard]] SafePointer nextStringOccurrence(const std::string& string, std::optional<bool> code = std::nullopt) const; // Next occurence of string
+		[[nodiscard]] SafePointer prevStringOccurrence(const std::string& string, std::optional<bool> code = std::nullopt) const; // Prev occurrence of string
+		[[nodiscard]] SafePointer nextStringOccurrence(const std::string& string, std::optional<bool> code = std::nullopt) const; // Next occurrence of string
 
 		inline std::strong_ordering operator<=>(const SafePointer& other) const
 		{
@@ -183,12 +183,12 @@ namespace BCRL {
 		[[nodiscard]] Session findXREFs(const std::string& moduleName, bool relative = true, bool absolute = true);
 #endif
 		// Signatures
-		[[nodiscard]] Session prevByteOccurrence(const std::string& signature, std::optional<bool> code = std::nullopt); // Prev occurence of signature
-		[[nodiscard]] Session nextByteOccurrence(const std::string& signature, std::optional<bool> code = std::nullopt); // Next occurence of signature
+		[[nodiscard]] Session prevByteOccurrence(const std::string& signature, std::optional<bool> code = std::nullopt); // Prev occurrence of signature
+		[[nodiscard]] Session nextByteOccurrence(const std::string& signature, std::optional<bool> code = std::nullopt); // Next occurrence of signature
 
 		// Strings
-		[[nodiscard]] Session prevStringOccurrence(const std::string& string); // Prev occurence of string
-		[[nodiscard]] Session nextStringOccurrence(const std::string& string); // Next occurence of string
+		[[nodiscard]] Session prevStringOccurrence(const std::string& string); // Prev occurrence of string
+		[[nodiscard]] Session nextStringOccurrence(const std::string& string); // Next occurrence of string
 
 		// Advanced Flow
 		[[nodiscard]] Session purgeDuplicates();
@@ -198,7 +198,7 @@ namespace BCRL {
 		[[nodiscard]] Session repeater(std::size_t iterations, const std::function<void(SafePointer&)>& action); // Repeats action `iterations` times
 		[[nodiscard]] Session filter(const std::function<bool(SafePointer)>& predicate); // Filters out non-conforming pointers
 		[[nodiscard]] Session map(const std::function<std::optional<SafePointer>(SafePointer)>& transformer, bool purgeInvalid = true, bool purgeDuplicates = true); // Maps pointer to other pointer (nullopts will be removed)
-		[[nodiscard]] Session map(const std::function<std::vector<SafePointer>(SafePointer)>& transformer, bool purgeInvalid = true, bool purgeDuplicates = true); // Maps pointer to other pointers (nullopts will be removed)
+		[[nodiscard]] Session flatMap(const std::function<std::vector<SafePointer>(SafePointer)>& transformer, bool purgeInvalid = true, bool purgeDuplicates = true); // Maps pointer to other pointers (nullopts will be removed)
 
 		// Finalizing
 		[[nodiscard]] inline std::size_t size() { return pointers.size(); }

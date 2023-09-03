@@ -83,7 +83,7 @@ Session Session::map(const std::function<std::optional<SafePointer>(SafePointer)
 	return session;
 }
 
-Session Session::map(const std::function<std::vector<SafePointer>(SafePointer)>& transformer, bool purgeInvalid, bool purgeDuplicates)
+Session Session::flatMap(const std::function<std::vector<SafePointer>(SafePointer)>& transformer, bool purgeInvalid, bool purgeDuplicates)
 {
 	std::vector<SafePointer> newPointers{};
 	for (SafePointer safePointer : pointers) {
