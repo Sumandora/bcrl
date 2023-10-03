@@ -9,11 +9,13 @@ bool SafePointer::isValid(std::size_t length) const
 	if (!safe)
 		return true; // The user wants it this way
 	const MemoryRegionStorage::MemoryRegion* region = memoryRegionStorage.addressRegion(pointer);
+	if(region == nullptr)
+		return false;
 	for (std::size_t i = 0; i < length; i++) {
-		void* pointer = add(i).pointer;
-		if (&region->addressSpace.front() <= pointer && pointer < &region->addressSpace.back())
+		void* cPointer = i == 0 ? pointer : add(i).pointer;
+		if (&region->addressSpace.front() <= cPointer && cPointer < &region->addressSpace.back())
 			continue;
-		region = memoryRegionStorage.addressRegion(pointer);
+		region = memoryRegionStorage.addressRegion(cPointer);
 		if (region == nullptr)
 			return false;
 	}
