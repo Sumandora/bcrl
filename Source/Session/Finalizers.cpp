@@ -6,10 +6,10 @@ using namespace BCRL;
 
 std::vector<void*> Session::getPointers() const
 {
-	std::vector<void*> pointers{};
-	for (SafePointer safePointer : this->pointers)
-		pointers.push_back(safePointer.getPointer());
-	return pointers;
+	std::vector<void*> rawPointers{};
+	for (SafePointer safePointer : pointers)
+		rawPointers.push_back(safePointer.getPointer());
+	return { rawPointers.begin(), rawPointers.end() };
 }
 
 std::optional<void*> Session::first(const std::function<bool(SafePointer)>& predicate) const

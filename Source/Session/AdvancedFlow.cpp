@@ -4,8 +4,6 @@
 
 using namespace BCRL;
 
-// We don't use filter for these two, because we need to prevent the infinite loop
-
 Session Session::purgeInvalid(std::size_t length) const
 {
 	return map([length](SafePointer safePointer) -> std::optional<SafePointer> {
@@ -13,7 +11,7 @@ Session Session::purgeInvalid(std::size_t length) const
 			return safePointer;
 		else
 			return std::nullopt;
-	}); // Don't purge invalids after this map call, that would lead to a infinite loop
+	});
 }
 
 Session Session::forEach(const std::function<void(SafePointer&)>& action) const
