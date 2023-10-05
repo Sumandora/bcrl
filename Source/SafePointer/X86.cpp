@@ -27,7 +27,6 @@ SafePointer SafePointer::relativeToAbsolute() const
 
 constexpr std::size_t longestX86Insn = 15;
 
-
 SafePointer SafePointer::prevInstruction() const
 {
 	// What I am doing here has no scientific backing, it just happens to work **most** of the time.

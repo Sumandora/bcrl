@@ -58,11 +58,11 @@ Session Session::map(const std::function<std::optional<SafePointer>(SafePointer)
 	std::unordered_set<SafePointer, SafePointer::Hash> safePointerSet;
 	for (SafePointer safePointer : pointers) {
 		std::optional<SafePointer> newSafePointer = transformer(safePointer);
-		if(!newSafePointer.has_value())
+		if (!newSafePointer.has_value())
 			continue; // User removed the pointer
-		if(safePointerSet.contains(newSafePointer.value())) // Do this check before calling isValid unnecessarily as it is the most expensive operation here
+		if (safePointerSet.contains(newSafePointer.value())) // Do this check before calling isValid unnecessarily as it is the most expensive operation here
 			continue; // Duplicate - ignore it
-		if(isSafe() && !newSafePointer->isValid())
+		if (isSafe() && !newSafePointer->isValid())
 			continue; // We are in safe mode and the pointer isn't valid, remove it
 
 		safePointerSet.insert(newSafePointer.value());
@@ -76,9 +76,9 @@ Session Session::flatMap(const std::function<std::vector<SafePointer>(SafePointe
 	for (SafePointer safePointer : pointers) {
 		std::vector<SafePointer> newSafePointers = transformer(safePointer);
 		for (const SafePointer& newSafePointer : newSafePointers) {
-			if(safePointerSet.contains(newSafePointer)) // Do this check before calling isValid unnecessarily as it is the most expensive operation here
+			if (safePointerSet.contains(newSafePointer)) // Do this check before calling isValid unnecessarily as it is the most expensive operation here
 				continue; // Duplicate - ignore it
-			if(isSafe() && !newSafePointer.isValid())
+			if (isSafe() && !newSafePointer.isValid())
 				continue; // We are in safe mode and the pointer isn't valid, remove it
 
 			safePointerSet.insert(newSafePointer);
