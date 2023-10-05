@@ -6,7 +6,6 @@
 #include <optional>
 #include <span>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace BCRL {
@@ -35,24 +34,18 @@ namespace BCRL {
 
 	class SafePointer { // A pointer which can't cause read access violations
 		void* pointer;
-		bool invalid = false; // Set to true, when an operation failed
-		bool safe;
+		bool invalid; // Set to true, when an operation failed
 
 	public:
 		SafePointer() = delete;
-		inline SafePointer(void* pointer, bool safe)
+		inline explicit SafePointer(void* pointer, bool invalid = false)
 			: pointer(pointer)
-			, safe(safe)
+			, invalid(invalid)
 		{
 		}
-		inline SafePointer(std::uintptr_t pointer, bool safe)
+		inline explicit SafePointer(std::uintptr_t pointer, bool invalid = false)
 			: pointer(reinterpret_cast<void*>(pointer))
-			, safe(safe)
-		{
-		}
-		inline SafePointer(const SafePointer& other, bool safe)
-			: pointer(other.pointer)
-			, safe(safe)
+			, invalid(invalid)
 		{
 		}
 
@@ -76,16 +69,12 @@ namespace BCRL {
 		}
 
 		[[nodiscard]] SafePointer invalidate() const;
+		[[nodiscard]] SafePointer revalidate() const;
 
 		// Manipulation
 		[[nodiscard]] SafePointer add(std::size_t operand) const;
 		[[nodiscard]] SafePointer sub(std::size_t operand) const;
 		[[nodiscard]] SafePointer dereference() const;
-
-		// Safety
-		[[nodiscard]] inline SafePointer setSafe(bool safe) const { return { this->pointer, safe }; }
-		[[nodiscard]] inline bool isSafe() const { return safe; }
-		[[nodiscard]] inline SafePointer toggleSafety() const { return { this->pointer, !isSafe() }; }
 
 		// X86
 #if defined(__x86_64) || defined(i386)
@@ -121,6 +110,13 @@ namespace BCRL {
 		{
 			return pointer;
 		};
+
+		struct Hash {
+			inline std::size_t operator()(const SafePointer& s) const noexcept
+			{
+				return std::hash<void*>{}(s.pointer);
+			}
+		};
 	};
 
 	class Session {
@@ -132,23 +128,20 @@ namespace BCRL {
 			: pointers(std::move(pointers))
 			, safe(safe)
 		{
-			for (SafePointer& pointer : this->pointers) {
-				pointer = pointer.setSafe(safe);
-			}
 		}
 		inline Session(const std::vector<void*>& pointers, bool safe)
-			: pointers({})
+			: pointers()
 			, safe(safe)
 		{
 			for (void* pointer : pointers) {
-				this->pointers.emplace_back(pointer, safe);
+				this->pointers.emplace_back(pointer);
 			}
 		}
 		inline Session(void* pointer, bool safe)
-			: pointers({})
+			: pointers()
 			, safe(safe)
 		{
-			pointers.emplace_back(pointer, safe);
+			pointers.emplace_back(pointer);
 		}
 
 	public:
@@ -168,9 +161,9 @@ namespace BCRL {
 		[[nodiscard]] Session dereference();
 
 		// Safety
-		[[nodiscard]] Session setSafe(bool safe);
+		[[nodiscard]] Session setSafety(bool newSafeness) { return { pointers, newSafeness }; }
 		[[nodiscard]] inline bool isSafe() const { return safe; }
-		[[nodiscard]] Session toggleSafety();
+		[[nodiscard]] Session toggleSafety() { return { pointers, !isSafe() }; }
 
 		// X86
 #if defined(__x86_64) || defined(i386)
@@ -191,14 +184,13 @@ namespace BCRL {
 		[[nodiscard]] Session nextStringOccurrence(const std::string& string); // Next occurrence of string
 
 		// Advanced Flow
-		[[nodiscard]] Session purgeDuplicates();
 		[[nodiscard]] Session purgeInvalid(std::size_t length = 1); // Will purge all pointers, which can't be dereferenced
 		[[nodiscard]] Session forEach(const std::function<void(SafePointer&)>& action);
 		[[nodiscard]] Session repeater(const std::function<bool(SafePointer&)>& action); // Repeats action until false is returned
 		[[nodiscard]] Session repeater(std::size_t iterations, const std::function<void(SafePointer&)>& action); // Repeats action `iterations` times
 		[[nodiscard]] Session filter(const std::function<bool(SafePointer)>& predicate); // Filters out non-conforming pointers
-		[[nodiscard]] Session map(const std::function<std::optional<SafePointer>(SafePointer)>& transformer, bool purgeInvalid = true, bool purgeDuplicates = true); // Maps pointer to other pointer (nullopts will be removed)
-		[[nodiscard]] Session flatMap(const std::function<std::vector<SafePointer>(SafePointer)>& transformer, bool purgeInvalid = true, bool purgeDuplicates = true); // Maps pointer to other pointers (nullopts will be removed)
+		[[nodiscard]] Session map(const std::function<std::optional<SafePointer>(SafePointer)>& transformer); // Maps pointer to other pointer (nullopts will be removed)
+		[[nodiscard]] Session flatMap(const std::function<std::vector<SafePointer>(SafePointer)>& transformer); // Maps pointer to other pointers (nullopts will be removed)
 
 		// Finalizing
 		[[nodiscard]] inline std::size_t size() { return pointers.size(); }

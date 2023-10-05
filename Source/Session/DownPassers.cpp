@@ -21,22 +21,6 @@ Session Session::dereference()
 	});
 }
 
-Session Session::setSafe(bool safe)
-{
-	Session session = map([safe](SafePointer safePointer) {
-		return safePointer.setSafe(safe);
-	});
-	session.safe = safe;
-	return session;
-}
-
-Session Session::toggleSafety()
-{
-	return map([](SafePointer safePointer) {
-		return safePointer.toggleSafety();
-	});
-}
-
 #if defined(__x86_64) || defined(i386)
 Session Session::relativeToAbsolute()
 {

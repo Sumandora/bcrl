@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
+
+include_guard()
+
 project(bcrl)
 
 file(GLOB_RECURSE BCRL_SOURCE_FILES "${PROJECT_SOURCE_DIR}/Source/*.cpp")

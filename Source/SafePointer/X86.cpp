@@ -63,7 +63,7 @@ std::vector<SafePointer> SafePointer::findXREFs(bool relative, bool absolute) co
 	SignatureScanner::XRefSignature signature(this->pointer, relative, absolute);
 	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.getMemoryRegions(std::nullopt, true)) {
 		for (void* ptr : signature.findAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
-			newPointers.emplace_back( ptr, isSafe() );
+			newPointers.emplace_back(ptr, false);
 		}
 	}
 
@@ -77,7 +77,7 @@ std::vector<SafePointer> SafePointer::findXREFs(const std::string& moduleName, b
 	SignatureScanner::XRefSignature signature(this->pointer, relative, absolute);
 	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.getMemoryRegions(std::nullopt, true, moduleName)) {
 		for (void* ptr : signature.findAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
-			newPointers.emplace_back( ptr, isSafe() );
+			newPointers.emplace_back(ptr, false);
 		}
 	}
 

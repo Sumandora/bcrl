@@ -19,7 +19,7 @@ SafePointer SafePointer::prevByteOccurrence(const std::string& signature, std::o
 		if (!hit)
 			continue;
 
-		return { hit, isSafe() };
+		return SafePointer{ hit, false };
 	}
 
 	return invalidate();
@@ -38,7 +38,7 @@ SafePointer SafePointer::nextByteOccurrence(const std::string& signature, std::o
 		if (!hit)
 			continue;
 
-		return { hit, isSafe() };
+		return SafePointer{ hit, false };
 	}
 
 	return invalidate();

@@ -19,7 +19,7 @@ SafePointer SafePointer::prevStringOccurrence(const std::string& string, std::op
 		if (!hit)
 			continue;
 
-		return { hit, isSafe() };
+		return SafePointer{ hit, false };
 	}
 
 	return invalidate();
@@ -38,7 +38,7 @@ SafePointer SafePointer::nextStringOccurrence(const std::string& string, std::op
 		if (!hit)
 			continue;
 
-		return { hit, isSafe() };
+		return SafePointer{ hit, false };
 	}
 
 	return invalidate();
