@@ -156,48 +156,48 @@ namespace BCRL {
 		[[nodiscard]] static Session arrayPointer(void* pointerArray, std::size_t index); // e.g. Virtual function tables
 
 		// Manipulation
-		[[nodiscard]] Session add(std::size_t operand);
-		[[nodiscard]] Session sub(std::size_t operand);
-		[[nodiscard]] Session dereference();
+		[[nodiscard]] Session add(std::size_t operand) const;
+		[[nodiscard]] Session sub(std::size_t operand) const;
+		[[nodiscard]] Session dereference() const;
 
 		// Safety
-		[[nodiscard]] Session setSafety(bool newSafeness);
+		[[nodiscard]] Session setSafety(bool newSafeness) const;
 		[[nodiscard]] inline bool isSafe() const { return safe; }
-		[[nodiscard]] Session toggleSafety();
+		[[nodiscard]] Session toggleSafety() const;
 
 		// X86
 #if defined(__x86_64) || defined(i386)
-		[[nodiscard]] Session relativeToAbsolute();
+		[[nodiscard]] Session relativeToAbsolute() const;
 
-		[[nodiscard]] Session prevInstruction(); // WARNING: X86 can't be disassembled backwards properly, use with caution
-		[[nodiscard]] Session nextInstruction();
+		[[nodiscard]] Session prevInstruction() const; // WARNING: X86 can't be disassembled backwards properly, use with caution
+		[[nodiscard]] Session nextInstruction() const;
 
-		[[nodiscard]] Session findXREFs(bool relative = true, bool absolute = true); // Since there can be multiple xrefs, this can increase the amount of addresses
-		[[nodiscard]] Session findXREFs(const std::string& moduleName, bool relative = true, bool absolute = true);
+		[[nodiscard]] Session findXREFs(bool relative = true, bool absolute = true) const; // Since there can be multiple xrefs, this can increase the amount of addresses
+		[[nodiscard]] Session findXREFs(const std::string& moduleName, bool relative = true, bool absolute = true) const;
 #endif
 		// Signatures
-		[[nodiscard]] Session prevByteOccurrence(const std::string& signature, std::optional<bool> code = std::nullopt); // Prev occurrence of signature
-		[[nodiscard]] Session nextByteOccurrence(const std::string& signature, std::optional<bool> code = std::nullopt); // Next occurrence of signature
+		[[nodiscard]] Session prevByteOccurrence(const std::string& signature, std::optional<bool> code = std::nullopt) const; // Prev occurrence of signature
+		[[nodiscard]] Session nextByteOccurrence(const std::string& signature, std::optional<bool> code = std::nullopt) const; // Next occurrence of signature
 
 		// Strings
-		[[nodiscard]] Session prevStringOccurrence(const std::string& string); // Prev occurrence of string
-		[[nodiscard]] Session nextStringOccurrence(const std::string& string); // Next occurrence of string
+		[[nodiscard]] Session prevStringOccurrence(const std::string& string) const; // Prev occurrence of string
+		[[nodiscard]] Session nextStringOccurrence(const std::string& string) const; // Next occurrence of string
 
 		// Advanced Flow
-		[[nodiscard]] Session purgeInvalid(std::size_t length = 1); // Will purge all pointers, which can't be dereferenced
-		[[nodiscard]] Session forEach(const std::function<void(SafePointer&)>& action);
-		[[nodiscard]] Session repeater(const std::function<bool(SafePointer&)>& action); // Repeats action until false is returned
-		[[nodiscard]] Session repeater(std::size_t iterations, const std::function<void(SafePointer&)>& action); // Repeats action `iterations` times
-		[[nodiscard]] Session filter(const std::function<bool(SafePointer)>& predicate); // Filters out non-conforming pointers
-		[[nodiscard]] Session map(const std::function<std::optional<SafePointer>(SafePointer)>& transformer); // Maps pointer to other pointer (nullopts will be removed)
-		[[nodiscard]] Session flatMap(const std::function<std::vector<SafePointer>(SafePointer)>& transformer); // Maps pointer to other pointers (nullopts will be removed)
+		[[nodiscard]] Session purgeInvalid(std::size_t length = 1) const; // Will purge all pointers, which can't be dereferenced
+		[[nodiscard]] Session forEach(const std::function<void(SafePointer&)>& action) const;
+		[[nodiscard]] Session repeater(const std::function<bool(SafePointer&)>& action) const; // Repeats action until false is returned
+		[[nodiscard]] Session repeater(std::size_t iterations, const std::function<void(SafePointer&)>& action) const; // Repeats action `iterations` times
+		[[nodiscard]] Session filter(const std::function<bool(SafePointer)>& predicate) const; // Filters out non-conforming pointers
+		[[nodiscard]] Session map(const std::function<std::optional<SafePointer>(SafePointer)>& transformer) const; // Maps pointer to other pointer (nullopts will be removed)
+		[[nodiscard]] Session flatMap(const std::function<std::vector<SafePointer>(SafePointer)>& transformer) const; // Maps pointer to other pointers (nullopts will be removed)
 
 		// Finalizing
-		[[nodiscard]] inline std::size_t size() { return pointers.size(); }
-		[[nodiscard]] std::vector<void*> getPointers();
-		[[nodiscard]] std::optional<void*> first(const std::function<bool(SafePointer)>& predicate); // Returns the first chosen pointer
-		[[nodiscard]] std::optional<void*> getPointer(); // Will return std::nullopt if there are no/multiple pointers available
-		[[nodiscard]] void* expect(const std::string& message); // Same as getPointer, but throws a std::runtime_error if not present
+		[[nodiscard]] inline std::size_t size() const { return pointers.size(); }
+		[[nodiscard]] std::vector<void*> getPointers() const;
+		[[nodiscard]] std::optional<void*> first(const std::function<bool(SafePointer)>& predicate) const; // Returns the first chosen pointer
+		[[nodiscard]] std::optional<void*> getPointer() const; // Will return std::nullopt if there are no/multiple pointers available
+		[[nodiscard]] void* expect(const std::string& message) const; // Same as getPointer, but throws a std::runtime_error if not present
 	};
 }
 

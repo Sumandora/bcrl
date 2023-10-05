@@ -2,12 +2,12 @@
 
 using namespace BCRL;
 
-Session Session::setSafety(bool newSafeness)
+Session Session::setSafety(bool newSafeness) const
 {
 	return { pointers, newSafeness };
 }
 
-Session Session::toggleSafety()
+Session Session::toggleSafety() const
 {
 	return { pointers, !isSafe() };
 }

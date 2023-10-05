@@ -6,7 +6,7 @@ using namespace BCRL;
 
 // We don't use filter for these two, because we need to prevent the infinite loop
 
-Session Session::purgeInvalid(std::size_t length)
+Session Session::purgeInvalid(std::size_t length) const
 {
 	return map([length](SafePointer safePointer) -> std::optional<SafePointer> {
 		if (safePointer.isValid(length))
@@ -16,7 +16,7 @@ Session Session::purgeInvalid(std::size_t length)
 	}); // Don't purge invalids after this map call, that would lead to a infinite loop
 }
 
-Session Session::forEach(const std::function<void(SafePointer&)>& action)
+Session Session::forEach(const std::function<void(SafePointer&)>& action) const
 {
 	return repeater([action](SafePointer& safePointer) {
 		action(safePointer);
@@ -24,7 +24,7 @@ Session Session::forEach(const std::function<void(SafePointer&)>& action)
 	});
 }
 
-Session Session::repeater(const std::function<bool(SafePointer&)>& action)
+Session Session::repeater(const std::function<bool(SafePointer&)>& action) const
 {
 	return map([action](SafePointer safePointer) {
 		while (action(safePointer))
@@ -33,7 +33,7 @@ Session Session::repeater(const std::function<bool(SafePointer&)>& action)
 	});
 }
 
-Session Session::repeater(std::size_t iterations, const std::function<void(SafePointer&)>& action)
+Session Session::repeater(std::size_t iterations, const std::function<void(SafePointer&)>& action) const
 {
 	return map([iterations, action](SafePointer safePointer) {
 		for (std::size_t i = 0; i < iterations; i++)
@@ -43,7 +43,7 @@ Session Session::repeater(std::size_t iterations, const std::function<void(SafeP
 	});
 }
 
-Session Session::filter(const std::function<bool(SafePointer)>& predicate)
+Session Session::filter(const std::function<bool(SafePointer)>& predicate) const
 {
 	return map([predicate](SafePointer safePointer) -> std::optional<SafePointer> {
 		if (predicate(safePointer))
@@ -53,7 +53,7 @@ Session Session::filter(const std::function<bool(SafePointer)>& predicate)
 	});
 }
 
-Session Session::map(const std::function<std::optional<SafePointer>(SafePointer)>& transformer)
+Session Session::map(const std::function<std::optional<SafePointer>(SafePointer)>& transformer) const
 {
 	std::unordered_set<SafePointer, SafePointer::Hash> safePointerSet;
 	for (SafePointer safePointer : pointers) {
@@ -70,7 +70,7 @@ Session Session::map(const std::function<std::optional<SafePointer>(SafePointer)
 	return { std::vector<SafePointer>{ safePointerSet.begin(), safePointerSet.end() }, isSafe() };
 }
 
-Session Session::flatMap(const std::function<std::vector<SafePointer>(SafePointer)>& transformer)
+Session Session::flatMap(const std::function<std::vector<SafePointer>(SafePointer)>& transformer) const
 {
 	std::unordered_set<SafePointer, SafePointer::Hash> safePointerSet;
 	for (SafePointer safePointer : pointers) {

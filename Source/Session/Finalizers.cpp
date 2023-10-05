@@ -4,7 +4,7 @@
 
 using namespace BCRL;
 
-std::vector<void*> Session::getPointers()
+std::vector<void*> Session::getPointers() const
 {
 	std::vector<void*> pointers{};
 	for (SafePointer safePointer : this->pointers)
@@ -12,7 +12,7 @@ std::vector<void*> Session::getPointers()
 	return pointers;
 }
 
-std::optional<void*> Session::first(const std::function<bool(SafePointer)>& predicate)
+std::optional<void*> Session::first(const std::function<bool(SafePointer)>& predicate) const
 {
 	for (SafePointer safePointer : this->pointers)
 		if (predicate(safePointer))
@@ -21,7 +21,7 @@ std::optional<void*> Session::first(const std::function<bool(SafePointer)>& pred
 	return std::nullopt;
 }
 
-std::optional<void*> Session::getPointer()
+std::optional<void*> Session::getPointer() const
 {
 	if (size() == 1)
 		return pointers.at(0).getPointer();
@@ -29,7 +29,7 @@ std::optional<void*> Session::getPointer()
 	return std::nullopt;
 }
 
-void* Session::expect(const std::string& message)
+void* Session::expect(const std::string& message) const
 {
 	std::optional<void*> optional = getPointer();
 
