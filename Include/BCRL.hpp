@@ -35,7 +35,7 @@ namespace BCRL {
 
 	class SafePointer { // A pointer which can't cause read access violations
 		void* pointer;
-		bool invalid = false; // Set to true, when a operation failed
+		bool invalid = false; // Set to true, when an operation failed
 		bool safe;
 
 	public:
@@ -205,6 +205,7 @@ namespace BCRL {
 		[[nodiscard]] std::vector<void*> getPointers();
 		[[nodiscard]] std::optional<void*> first(const std::function<bool(SafePointer)>& predicate); // Returns the first chosen pointer
 		[[nodiscard]] std::optional<void*> getPointer(); // Will return std::nullopt if there are no/multiple pointers available
+		[[nodiscard]] void* expect(const std::string& message); // Same as getPointer, but throws a std::runtime_error if not present
 	};
 }
 

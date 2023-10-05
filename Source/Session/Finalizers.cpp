@@ -1,5 +1,7 @@
 #include "BCRL.hpp"
 
+#include <stdexcept>
+
 using namespace BCRL;
 
 std::vector<void*> Session::getPointers()
@@ -25,4 +27,14 @@ std::optional<void*> Session::getPointer()
 		return pointers.at(0).getPointer();
 
 	return std::nullopt;
+}
+
+void* Session::expect(const std::string& message)
+{
+	std::optional<void*> optional = getPointer();
+
+	if(optional.has_value())
+		return optional.value();
+
+	throw std::runtime_error(message);
 }
