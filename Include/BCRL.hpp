@@ -161,9 +161,9 @@ namespace BCRL {
 		[[nodiscard]] Session dereference();
 
 		// Safety
-		[[nodiscard]] Session setSafety(bool newSafeness) { return { pointers, newSafeness }; }
+		[[nodiscard]] Session setSafety(bool newSafeness);
 		[[nodiscard]] inline bool isSafe() const { return safe; }
-		[[nodiscard]] Session toggleSafety() { return { pointers, !isSafe() }; }
+		[[nodiscard]] Session toggleSafety();
 
 		// X86
 #if defined(__x86_64) || defined(i386)
