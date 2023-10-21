@@ -85,9 +85,9 @@ std::vector<MemoryRegionStorage::MemoryRegion> MemoryRegionStorage::getMemoryReg
 const MemoryRegionStorage::MemoryRegion* MemoryRegionStorage::addressRegion(void* address) const
 {
 	long left = 0;
-	long right = memoryRegions.size() - 1;
+	long right = (long)memoryRegions.size() - 1;
 	while (left <= right) {
-		std::size_t middle = left + (right - left) / 2;
+		long middle = left + (right - left) / 2;
 		const MemoryRegion& memoryRegion = memoryRegions[middle];
 		if (&memoryRegion.addressSpace.front() <= address && address < &memoryRegion.addressSpace.back())
 			return &memoryRegion;
