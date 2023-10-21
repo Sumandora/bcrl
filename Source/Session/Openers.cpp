@@ -58,5 +58,5 @@ Session Session::pointer(void* pointer)
 Session Session::arrayPointer(void* pointerArray, std::size_t index)
 {
 	memoryRegionStorage.update();
-	return { (*reinterpret_cast<void***>(pointerArray))[index], true };
+	return { { SafePointer(pointerArray).dereference().add(index * sizeof(void*)).dereference() }, true };
 }
