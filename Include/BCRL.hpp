@@ -2,6 +2,7 @@
 #define BCRL_HPP
 
 #include <cstdint>
+#include <cstring>
 #include <functional>
 #include <optional>
 #include <span>
@@ -51,11 +52,14 @@ namespace BCRL {
 
 		[[nodiscard]] bool isValid(std::size_t length = 1) const;
 
-		template <typename T>
+		template <typename T> requires std::is_trivially_copyable_v<T>
 		[[nodiscard]] inline std::optional<T> read() const
 		{
-			if (isValid(sizeof(T*)))
-				return *(T*)pointer;
+			if (isValid(sizeof(T*))) {
+				T obj;
+				std::memcpy(&obj, pointer, sizeof(T));
+				return obj;
+			}
 			return std::nullopt;
 		}
 
