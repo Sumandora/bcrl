@@ -11,7 +11,7 @@ int main()
 	using namespace BCRL;
 	const char* newString = strdup("You will never find me!"); // The compiler reuses strings when possible, so we duplicate it to force our library not to cheat
 
-	auto functionPtr = Session::string(newString)
+	auto func = Session::string(newString)
 						   .findXREFs("bcrlExample" /*We know the executable name, no point in searching somewhere else*/, true, false) // main and superSecretMethod
 						   .add(4)
 						   .repeater([](SafePointer& ptr) { ptr = ptr.nextInstruction(); return !ptr.equals<unsigned char>('\xe8'); }) // Find next call instruction
@@ -22,9 +22,7 @@ int main()
 						   .nextByteOccurrence("c3") // Go to return
 						   .prevByteOccurrence("55 48 89 e5") // Go back to the method prolog
 						   .forEach([](SafePointer ptr) { printf("anotherSecretMethod: %p\n", ptr.getPointer()); })
-						   .expect("Couldn't find anotherSecretMethod");
-
-	auto func = reinterpret_cast<void (*)()>(functionPtr);
+						   .expect<void(*)()>("Couldn't find anotherSecretMethod");
 
 	auto stringSearch = Session::string(strdup("I really really really really really love Linux!")).getPointer();
 	assert(stringSearch.has_value());

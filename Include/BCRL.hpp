@@ -202,6 +202,12 @@ namespace BCRL {
 		[[nodiscard]] std::optional<void*> first(const std::function<bool(SafePointer)>& predicate) const; // Returns the first chosen pointer
 		[[nodiscard]] std::optional<void*> getPointer() const; // Will return std::nullopt if there are no/multiple pointers available
 		[[nodiscard]] void* expect(const std::string& message) const; // Same as getPointer, but throws a std::runtime_error if not present
+
+		// Automatic casts
+		template <typename T>
+		[[nodiscard]] T expect(const std::string& message) const {
+			return reinterpret_cast<T>(expect(message));
+		}
 	};
 }
 
