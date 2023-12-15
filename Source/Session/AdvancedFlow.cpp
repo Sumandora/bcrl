@@ -6,11 +6,10 @@ using namespace BCRL;
 
 Session Session::purgeInvalid(std::size_t length) const
 {
-	return map([length](SafePointer safePointer) -> std::optional<SafePointer> {
+	return map([length](const SafePointer& safePointer) {
 		if (safePointer.isValid(length))
 			return safePointer;
-		else
-			return std::nullopt;
+		return safePointer.invalidate();
 	});
 }
 
@@ -36,46 +35,38 @@ Session Session::repeater(std::size_t iterations, const std::function<void(SafeP
 	return map([iterations, action](SafePointer safePointer) {
 		for (std::size_t i = 0; i < iterations; i++)
 			action(safePointer);
-
 		return safePointer;
 	});
 }
 
-Session Session::filter(const std::function<bool(SafePointer)>& predicate) const
+Session Session::filter(const std::function<bool(const SafePointer&)>& predicate) const
 {
-	return map([predicate](SafePointer safePointer) -> std::optional<SafePointer> {
+	return map([predicate](const SafePointer& safePointer) {
 		if (predicate(safePointer))
-			return { safePointer };
-		else
-			return std::nullopt;
+			return safePointer;
+		return safePointer.invalidate();
 	});
 }
 
-Session Session::map(const std::function<std::optional<SafePointer>(SafePointer)>& transformer) const
+Session Session::map(const std::function<SafePointer(const SafePointer&)>& transformer) const
 {
 	std::unordered_set<SafePointer, SafePointer::Hash> safePointerSet;
 	for (SafePointer safePointer : pointers) {
-		std::optional<SafePointer> newSafePointer = transformer(safePointer);
-		if (!newSafePointer.has_value())
-			continue; // User removed the pointer
-		if (safePointerSet.contains(newSafePointer.value())) // Do this check before calling isValid unnecessarily as it is the most expensive operation here
-			continue; // Duplicate - ignore it
-		if (isSafe() && !newSafePointer->isValid())
+		SafePointer newSafePointer = transformer(safePointer);
+		if (isSafe() && !newSafePointer.isValid())
 			continue; // We are in safe mode and the pointer isn't valid, remove it
 
-		safePointerSet.insert(newSafePointer.value());
+		safePointerSet.insert(newSafePointer);
 	}
-	return { std::vector<SafePointer>{ safePointerSet.begin(), safePointerSet.end() }, isSafe() };
+	return { safePointerSet, isSafe() };
 }
 
-Session Session::flatMap(const std::function<std::vector<SafePointer>(SafePointer)>& transformer) const
+Session Session::flatMap(const std::function<std::vector<SafePointer>(const SafePointer&)>& transformer) const
 {
 	std::unordered_set<SafePointer, SafePointer::Hash> safePointerSet;
 	for (SafePointer safePointer : pointers) {
 		std::vector<SafePointer> newSafePointers = transformer(safePointer);
 		for (const SafePointer& newSafePointer : newSafePointers) {
-			if (safePointerSet.contains(newSafePointer)) // Do this check before calling isValid unnecessarily as it is the most expensive operation here
-				continue; // Duplicate - ignore it
 			if (isSafe() && !newSafePointer.isValid())
 				continue; // We are in safe mode and the pointer isn't valid, remove it
 

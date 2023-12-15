@@ -14,13 +14,13 @@ MemoryRegionStorage::MemoryRegionStorage()
 
 bool MemoryRegionStorage::update()
 {
-	decltype(memoryRegions) newMemoryRegions{};
 	std::fstream fileStream{ "/proc/self/maps", std::fstream::in };
 	if (!fileStream) {
-		this->memoryRegions = newMemoryRegions;
+		this->memoryRegions.clear();
 		return false;
 	}
 
+	decltype(memoryRegions) newMemoryRegions{};
 	for (std::string line; std::getline(fileStream, line);) {
 		if (line.empty())
 			continue; // ?
@@ -54,7 +54,7 @@ bool MemoryRegionStorage::update()
 				fileName = name;
 		}
 
-		newMemoryRegions[begin] = MemoryRegion{ begin, end - begin, columns[1][1] == 'w', columns[1][2] == 'x', fileName };
+		newMemoryRegions[begin] = MemoryRegion{ begin, end - begin, columns[1][2] == 'x', fileName };
 	}
 
 	fileStream.close();

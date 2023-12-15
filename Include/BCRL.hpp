@@ -1,15 +1,14 @@
 #ifndef BCRL_HPP
 #define BCRL_HPP
 
-#include <cstdint>
-#include <cstring>
-#include <functional>
-#include <map>
 #include <optional>
-#include <span>
+#include <map>
+#include <cstdint>
 #include <string>
-#include <unordered_set>
+#include <cstring>
 #include <vector>
+#include <unordered_set>
+#include <functional>
 
 namespace BCRL {
 	inline class MemoryRegionStorage {
@@ -17,7 +16,7 @@ namespace BCRL {
 		struct MemoryRegion {
 			std::uintptr_t begin;
 			size_t length;
-			bool writable, executable;
+			bool executable;
 			std::optional<std::string> name;
 		};
 
@@ -72,23 +71,23 @@ namespace BCRL {
 			return false;
 		}
 
-		[[nodiscard]] SafePointer invalidate() const;
-		[[nodiscard]] SafePointer revalidate() const;
+		[[nodiscard]] SafePointer invalidate() const; // Marks safe pointer as invalid
+		[[nodiscard]] SafePointer revalidate() const; // Marks safe pointer as valid
 
 		// Manipulation
-		[[nodiscard]] SafePointer add(std::size_t operand) const;
-		[[nodiscard]] SafePointer sub(std::size_t operand) const;
-		[[nodiscard]] SafePointer dereference() const;
+		[[nodiscard]] SafePointer add(std::size_t operand) const; // Advances all pointers forward
+		[[nodiscard]] SafePointer sub(std::size_t operand) const; // Inverse of above
+		[[nodiscard]] SafePointer dereference() const; // Follows a pointer
 
 		// X86
 #if defined(__x86_64) || defined(i386)
-		[[nodiscard]] SafePointer relativeToAbsolute() const;
+		[[nodiscard]] SafePointer relativeToAbsolute() const; // Follows down a relative offset
 
 		[[nodiscard]] SafePointer prevInstruction() const; // WARNING: X86 can't be disassembled backwards properly, use with caution
-		[[nodiscard]] SafePointer nextInstruction() const;
+		[[nodiscard]] SafePointer nextInstruction() const; // Skips the current X86 instruction
 
 		[[nodiscard]] std::vector<SafePointer> findXREFs(bool relative = true, bool absolute = true) const; // Since there can be multiple xrefs, this can increase the amount of addresses
-		[[nodiscard]] std::vector<SafePointer> findXREFs(const std::string& moduleName, bool relative = true, bool absolute = true) const;
+		[[nodiscard]] std::vector<SafePointer> findXREFs(const std::string& moduleName, bool relative = true, bool absolute = true) const; // Same as above but limited to a single module
 #endif
 		// Signatures
 		[[nodiscard]] SafePointer prevByteOccurrence(const std::string& signature, std::optional<bool> code = std::nullopt) const; // Last occurrence of signature
@@ -163,12 +162,12 @@ namespace BCRL {
 		[[nodiscard]] static Session string(const char* string);
 		[[nodiscard]] static Session pointerList(const std::vector<void*>& pointers);
 		[[nodiscard]] static Session pointer(void* pointer);
-		[[nodiscard]] static Session arrayPointer(void* pointerArray, std::size_t index); // e.g. Virtual function tables
+		[[nodiscard]] static Session pointerArray(void* array, std::size_t index); // e.g. Virtual function tables
 
 		// Manipulation
-		[[nodiscard]] Session add(std::size_t operand) const;
-		[[nodiscard]] Session sub(std::size_t operand) const;
-		[[nodiscard]] Session dereference() const;
+		[[nodiscard]] Session add(std::size_t operand) const; // Advances all pointers forward
+		[[nodiscard]] Session sub(std::size_t operand) const; // Inverse of above
+		[[nodiscard]] Session dereference() const; // Follows a pointer
 
 		// Safety
 		[[nodiscard]] Session setSafety(bool newSafeness) const;
@@ -177,13 +176,13 @@ namespace BCRL {
 
 		// X86
 #if defined(__x86_64) || defined(i386)
-		[[nodiscard]] Session relativeToAbsolute() const;
+		[[nodiscard]] Session relativeToAbsolute() const; // Follows down a relative offset
 
 		[[nodiscard]] Session prevInstruction() const; // WARNING: X86 can't be disassembled backwards properly, use with caution
-		[[nodiscard]] Session nextInstruction() const;
+		[[nodiscard]] Session nextInstruction() const; // Skips the current X86 instruction
 
 		[[nodiscard]] Session findXREFs(bool relative = true, bool absolute = true) const; // Since there can be multiple xrefs, this can increase the amount of addresses
-		[[nodiscard]] Session findXREFs(const std::string& moduleName, bool relative = true, bool absolute = true) const;
+		[[nodiscard]] Session findXREFs(const std::string& moduleName, bool relative = true, bool absolute = true) const; // Same as above but limited to a single module
 #endif
 		// Signatures
 		[[nodiscard]] Session prevByteOccurrence(const std::string& signature, std::optional<bool> code = std::nullopt) const; // Prev occurrence of signature
@@ -194,17 +193,17 @@ namespace BCRL {
 		[[nodiscard]] Session nextStringOccurrence(const std::string& string) const; // Next occurrence of string
 
 		// Advanced Flow
-		[[nodiscard]] Session purgeInvalid(std::size_t length = 1) const; // Will purge all pointers, which can't be dereferenced
-		[[nodiscard]] Session forEach(const std::function<void(SafePointer&)>& action) const;
+		[[nodiscard]] Session purgeInvalid(std::size_t length = 1) const; // Will purge all pointers, which can't be dereferenced (Useful when using unsafe mode)
+		[[nodiscard]] Session forEach(const std::function<void(SafePointer&)>& action) const; // Calls action on each pointer
 		[[nodiscard]] Session repeater(const std::function<bool(SafePointer&)>& action) const; // Repeats action until false is returned
 		[[nodiscard]] Session repeater(std::size_t iterations, const std::function<void(SafePointer&)>& action) const; // Repeats action `iterations` times
-		[[nodiscard]] Session filter(const std::function<bool(SafePointer)>& predicate) const; // Filters out non-conforming pointers
-		[[nodiscard]] Session map(const std::function<std::optional<SafePointer>(SafePointer)>& transformer) const; // Maps pointer to other pointer (nullopts will be removed)
-		[[nodiscard]] Session flatMap(const std::function<std::vector<SafePointer>(SafePointer)>& transformer) const; // Maps pointer to other pointers (nullopts will be removed)
+		[[nodiscard]] Session filter(const std::function<bool(const SafePointer&)>& predicate) const; // Filters out non-conforming pointers
+		[[nodiscard]] Session map(const std::function<SafePointer(const SafePointer&)>& transformer) const; // Maps pointer to other pointer
+		[[nodiscard]] Session flatMap(const std::function<std::vector<SafePointer>(const SafePointer&)>& transformer) const; // Maps pointer to other pointers
 
 		// Finalizing
-		[[nodiscard]] std::size_t size() const;
-		[[nodiscard]] std::vector<void*> getPointers() const;
+		[[nodiscard]] inline std::size_t size() const; // Returns size of remaining pointers
+		[[nodiscard]] std::vector<void*> getPointers() const; // Returns all remaining pointers
 		[[nodiscard]] std::optional<void*> getPointer() const; // Will return std::nullopt if there are no/multiple pointers available
 		[[nodiscard]] void* expect(const std::string& message) const; // Same as getPointer, but throws a std::runtime_error if not present
 	};
