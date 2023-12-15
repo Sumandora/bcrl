@@ -10,16 +10,19 @@ SafePointer SafePointer::prevByteOccurrence(const std::string& signature, std::o
 {
 	SignatureScanner::ByteSignature convertedSignature{ signature };
 
-	for (const MemoryRegionStorage::MemoryRegion& memoryRegion : std::ranges::views::reverse(memoryRegionStorage.getMemoryRegions(std::nullopt, code))) {
-		if (&memoryRegion.addressSpace.front() > pointer)
+	for(const auto& [begin, region] : std::ranges::reverse_view(memoryRegionStorage.getMemoryRegions())) {
+		if (begin > pointer)
 			continue;
 
-		void* hit = convertedSignature.findPrev<void*>(std::min(reinterpret_cast<char*>(pointer), reinterpret_cast<char*>(&memoryRegion.addressSpace.back())), &memoryRegion.addressSpace.front());
-
-		if (!hit)
+		if(code.has_value() && region.executable != code.value())
 			continue;
 
-		return SafePointer{ hit, false };
+		auto hit = convertedSignature.findPrev(std::min(pointer, begin + region.length), { begin });
+
+		if (!hit.has_value())
+			continue;
+
+		return SafePointer{ hit.value(), false };
 	}
 
 	return invalidate();
@@ -29,16 +32,19 @@ SafePointer SafePointer::nextByteOccurrence(const std::string& signature, std::o
 {
 	SignatureScanner::ByteSignature convertedSignature{ signature };
 
-	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.getMemoryRegions(std::nullopt, code)) {
-		if (&fileMapping.addressSpace.back() < pointer)
+	for (const auto& [begin, region] : memoryRegionStorage.getMemoryRegions()) {
+		if (begin + region.length < pointer)
 			continue;
 
-		void* hit = convertedSignature.findNext<void*>(std::max(reinterpret_cast<char*>(pointer), reinterpret_cast<char*>(&fileMapping.addressSpace.front())), &fileMapping.addressSpace.back());
-
-		if (!hit)
+		if(code.has_value() && region.executable != code.value())
 			continue;
 
-		return SafePointer{ hit, false };
+		auto hit = convertedSignature.findNext(std::max(pointer, begin), { begin + region.length });
+
+		if (!hit.has_value())
+			continue;
+
+		return SafePointer{ hit.value(), false };
 	}
 
 	return invalidate();
@@ -48,6 +54,6 @@ bool SafePointer::doesMatch(const std::string& signature) const
 {
 	SignatureScanner::ByteSignature convertedSignature{ signature };
 	if (isValid(convertedSignature.length()))
-		return convertedSignature.doesMatch<void*>(pointer);
+		return convertedSignature.doesMatch(pointer);
 	return false;
 }

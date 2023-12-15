@@ -82,5 +82,5 @@ Session Session::flatMap(const std::function<std::vector<SafePointer>(SafePointe
 			safePointerSet.insert(newSafePointer);
 		}
 	}
-	return { std::vector<SafePointer>{ safePointerSet.begin(), safePointerSet.end() }, isSafe() };
+	return { safePointerSet, isSafe() };
 }

@@ -34,8 +34,8 @@ SafePointer SafePointer::prevInstruction() const
 		// The longer this for goes on, the worse/inaccurate the results will get
 		SafePointer addr = this->sub(offset);
 		std::size_t insnLength; // The last disassembled instruction
-		while (addr.pointer < this && isValid(longestX86Insn))
-			addr = addr.add(insnLength = ldisasm(pointer, is64Bit));
+		while (addr < *this && isValid(longestX86Insn))
+			addr = addr.add(insnLength = ldisasm(reinterpret_cast<const void*>(pointer), is64Bit));
 		if ((*this == addr) == 0) {
 			// Apparently we found a point where instructions will end up exactly hitting
 			// our function, this seems good. This does not ensure correctness.
@@ -49,7 +49,7 @@ SafePointer SafePointer::prevInstruction() const
 SafePointer SafePointer::nextInstruction() const
 {
 	if (isValid(longestX86Insn))
-		return add(ldisasm(pointer, is64Bit));
+		return add(ldisasm(reinterpret_cast<const void*>(pointer), is64Bit));
 	else
 		return invalidate();
 }
@@ -60,8 +60,11 @@ std::vector<SafePointer> SafePointer::findXREFs(bool relative, bool absolute) co
 	std::vector<SafePointer> newPointers{};
 
 	SignatureScanner::XRefSignature signature(this->pointer, relative, absolute);
-	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.getMemoryRegions(std::nullopt, true)) {
-		for (void* ptr : signature.findAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
+	for (const auto& [begin, region] : memoryRegionStorage.getMemoryRegions()) {
+		if(!region.executable)
+			continue;
+
+		for (std::uintptr_t ptr : signature.findAll(begin, begin + region.length)) {
 			newPointers.emplace_back(ptr, false);
 		}
 	}
@@ -74,8 +77,14 @@ std::vector<SafePointer> SafePointer::findXREFs(const std::string& moduleName, b
 	std::vector<SafePointer> newPointers{};
 
 	SignatureScanner::XRefSignature signature(this->pointer, relative, absolute);
-	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.getMemoryRegions(std::nullopt, true, moduleName)) {
-		for (void* ptr : signature.findAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
+	for (const auto& [begin, region] : memoryRegionStorage.getMemoryRegions()) {
+		if(!region.executable)
+			continue;
+
+		if(!region.name.has_value() || !region.name->ends_with(moduleName))
+			continue;
+
+		for (std::uintptr_t ptr : signature.findAll(begin, begin + region.length)) {
 			newPointers.emplace_back(ptr, false);
 		}
 	}

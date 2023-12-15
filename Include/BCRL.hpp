@@ -4,48 +4,48 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <map>
 #include <optional>
 #include <span>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace BCRL {
 	inline class MemoryRegionStorage {
 	public:
 		struct MemoryRegion {
-			std::span<std::byte> addressSpace;
+			std::uintptr_t begin;
+			size_t length;
 			bool writable, executable;
 			std::optional<std::string> name;
 		};
 
 	private:
-		std::vector<MemoryRegion> memoryRegions{};
+		std::map<std::uintptr_t /*begin address*/, MemoryRegion> memoryRegions{};
 
 	public:
 		MemoryRegionStorage();
 		bool update(); // To update memory regions call this (for example on dlopen/dlclose calls)
 
-		[[nodiscard]] std::vector<MemoryRegion> getMemoryRegions(
-			std::optional<bool> writable = std::nullopt,
-			std::optional<bool> executable = std::nullopt,
-			std::optional<std::string> name = std::nullopt) const;
-		const MemoryRegion* addressRegion(void* address) const;
+		[[nodiscard]] const std::map<std::uintptr_t /*begin address*/, MemoryRegion>& getMemoryRegions() const;
+		[[nodiscard]] std::optional<std::reference_wrapper<const MemoryRegion>> addressRegion(std::uintptr_t address) const;
 
 	} memoryRegionStorage;
 
 	class SafePointer { // A pointer which can't cause read access violations
-		void* pointer;
+		std::uintptr_t pointer;
 		bool invalid; // Set to true, when an operation failed
 
 	public:
 		SafePointer() = delete;
 		inline explicit SafePointer(void* pointer, bool invalid = false)
-			: pointer(pointer)
+			: pointer(reinterpret_cast<std::uintptr_t>(pointer))
 			, invalid(invalid)
 		{
 		}
 		inline explicit SafePointer(std::uintptr_t pointer, bool invalid = false)
-			: pointer(reinterpret_cast<void*>(pointer))
+			: pointer(pointer)
 			, invalid(invalid)
 		{
 		}
@@ -57,7 +57,7 @@ namespace BCRL {
 		{
 			if (isValid(sizeof(T*))) {
 				T obj;
-				std::memcpy(&obj, pointer, sizeof(T));
+				std::memcpy(&obj, reinterpret_cast<const void*>(pointer), sizeof(T));
 				return obj;
 			}
 			return std::nullopt;
@@ -102,15 +102,15 @@ namespace BCRL {
 		inline std::strong_ordering operator<=>(const SafePointer& other) const
 		{
 
-			return reinterpret_cast<std::uintptr_t>(pointer) <=> reinterpret_cast<std::uintptr_t>(other.pointer);
+			return pointer <=> other.pointer;
 		}
 
 		inline bool operator==(const SafePointer& other) const
 		{
-			return reinterpret_cast<std::uintptr_t>(pointer) == reinterpret_cast<std::uintptr_t>(other.pointer);
+			return pointer == other.pointer;
 		}
 
-		[[nodiscard]] inline void* getPointer() const
+		[[nodiscard]] inline std::uintptr_t getPointer() const
 		{
 			return pointer;
 		};
@@ -118,34 +118,40 @@ namespace BCRL {
 		struct Hash {
 			inline std::size_t operator()(const SafePointer& s) const noexcept
 			{
-				return std::hash<void*>{}(s.pointer);
+				return std::hash<decltype(s.pointer)>{}(s.pointer);
 			}
 		};
 	};
 
 	class Session {
-		std::vector<SafePointer> pointers{};
+		std::unordered_set<SafePointer, SafePointer::Hash> pointers{};
 
 		bool safe; // Are we using safety measures?
 
-		inline Session(std::vector<SafePointer> pointers, bool safe)
+		inline Session(std::unordered_set<SafePointer, SafePointer::Hash>&& pointers, bool safe)
 			: pointers(std::move(pointers))
 			, safe(safe)
 		{
 		}
-		inline Session(const std::vector<void*>& pointers, bool safe)
+		template <typename Container>
+		inline Session(const Container& pointers, bool safe)
 			: pointers()
 			, safe(safe)
 		{
-			for (void* pointer : pointers) {
-				this->pointers.emplace_back(pointer);
+			for (auto pointer : pointers) {
+				this->pointers.emplace(pointer);
 			}
 		}
-		inline Session(void* pointer, bool safe)
+		inline Session(std::uintptr_t pointer, bool safe)
 			: pointers()
 			, safe(safe)
 		{
-			pointers.emplace_back(pointer);
+			pointers.emplace(pointer);
+		}
+		inline explicit Session(bool safe)
+			: pointers()
+			, safe(safe)
+		{
 		}
 
 	public:
@@ -166,7 +172,7 @@ namespace BCRL {
 
 		// Safety
 		[[nodiscard]] Session setSafety(bool newSafeness) const;
-		[[nodiscard]] inline bool isSafe() const { return safe; }
+		[[nodiscard]] bool isSafe() const;
 		[[nodiscard]] Session toggleSafety() const;
 
 		// X86
@@ -197,9 +203,8 @@ namespace BCRL {
 		[[nodiscard]] Session flatMap(const std::function<std::vector<SafePointer>(SafePointer)>& transformer) const; // Maps pointer to other pointers (nullopts will be removed)
 
 		// Finalizing
-		[[nodiscard]] inline std::size_t size() const { return pointers.size(); }
+		[[nodiscard]] std::size_t size() const;
 		[[nodiscard]] std::vector<void*> getPointers() const;
-		[[nodiscard]] std::optional<void*> first(const std::function<bool(SafePointer)>& predicate) const; // Returns the first chosen pointer
 		[[nodiscard]] std::optional<void*> getPointer() const; // Will return std::nullopt if there are no/multiple pointers available
 		[[nodiscard]] void* expect(const std::string& message) const; // Same as getPointer, but throws a std::runtime_error if not present
 	};

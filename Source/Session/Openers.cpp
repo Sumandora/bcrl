@@ -1,5 +1,7 @@
 #include "BCRL.hpp"
 
+#include <limits>
+
 #include "SignatureScanner.hpp"
 
 using namespace BCRL;
@@ -7,20 +9,27 @@ using namespace BCRL;
 Session Session::module(const char* moduleName)
 {
 	memoryRegionStorage.update();
-	std::vector<MemoryRegionStorage::MemoryRegion> memoryRegions = memoryRegionStorage.getMemoryRegions(std::nullopt, std::nullopt, moduleName);
-	if (memoryRegions.empty())
-		return { nullptr, true };
-	return { &memoryRegions[0].addressSpace.front(), true };
+	constexpr auto lowestDef = std::numeric_limits<std::uintptr_t>::max();
+	std::uintptr_t lowest = lowestDef;
+	for (const auto& [begin, region] : memoryRegionStorage.getMemoryRegions())
+		if(region.name.has_value() && region.name->ends_with(moduleName))
+			if(lowest == lowestDef || lowest > begin)
+				lowest = begin;
+	if (lowest == lowestDef)
+		return Session{ true };
+	return { lowest, true };
 }
 
 Session Session::string(const char* string)
 {
 	memoryRegionStorage.update();
-	std::vector<void*> pointers{};
+	std::vector<std::uintptr_t> pointers{};
 	SignatureScanner::StringSignature signature{ string };
 
-	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.getMemoryRegions()) {
-		for (void* ptr : signature.findAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
+	for (const auto& [begin, region] : memoryRegionStorage.getMemoryRegions()) {
+		if(region.executable) continue; // Strings are not in executable regions
+
+		for (std::uintptr_t ptr : signature.findAll(begin, begin + region.length)) {
 			pointers.push_back(ptr);
 		}
 	}
@@ -31,11 +40,14 @@ Session Session::string(const char* string)
 Session Session::signature(const char* signature, std::optional<bool> code)
 {
 	memoryRegionStorage.update();
-	std::vector<void*> pointers{};
+	std::vector<std::uintptr_t> pointers{};
 	SignatureScanner::ByteSignature convertedSignature{ signature };
 
-	for (const MemoryRegionStorage::MemoryRegion& fileMapping : memoryRegionStorage.getMemoryRegions(std::nullopt, code)) {
-		for (void* ptr : convertedSignature.findAll<void*>(&fileMapping.addressSpace.front(), &fileMapping.addressSpace.back())) {
+	for (const auto& [begin, region] : memoryRegionStorage.getMemoryRegions()) {
+		if(code.has_value() && region.executable != code)
+			continue;
+
+		for (std::uintptr_t ptr : convertedSignature.findAll(begin, begin + region.length)) {
 			pointers.push_back(ptr);
 		}
 	}
@@ -52,7 +64,7 @@ Session Session::pointerList(const std::vector<void*>& pointers)
 Session Session::pointer(void* pointer)
 {
 	memoryRegionStorage.update();
-	return { pointer, true };
+	return { reinterpret_cast<std::uintptr_t>(pointer), true };
 }
 
 Session Session::arrayPointer(void* pointerArray, std::size_t index)

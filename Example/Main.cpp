@@ -21,7 +21,7 @@ int main()
 						   .relativeToAbsolute()
 						   .nextByteOccurrence("c3") // Go to return
 						   .prevByteOccurrence("55 48 89 e5") // Go back to the method prolog
-						   .forEach([](SafePointer ptr) { printf("anotherSecretMethod: %p\n", ptr.getPointer()); })
+						   .forEach([](SafePointer ptr) { printf("anotherSecretMethod: 0x%lx\n", ptr.getPointer()); })
 						   .expect("Couldn't find anotherSecretMethod");
 
 	auto func = reinterpret_cast<void (*)()>(functionPtr);

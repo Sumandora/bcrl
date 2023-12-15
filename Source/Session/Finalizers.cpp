@@ -4,27 +4,23 @@
 
 using namespace BCRL;
 
+std::size_t Session::size() const
+{
+	return pointers.size();
+}
+
 std::vector<void*> Session::getPointers() const
 {
 	std::vector<void*> rawPointers{};
 	for (SafePointer safePointer : pointers)
-		rawPointers.push_back(safePointer.getPointer());
-	return { rawPointers.begin(), rawPointers.end() };
-}
-
-std::optional<void*> Session::first(const std::function<bool(SafePointer)>& predicate) const
-{
-	for (SafePointer safePointer : this->pointers)
-		if (predicate(safePointer))
-			return safePointer.getPointer();
-
-	return std::nullopt;
+		rawPointers.push_back(reinterpret_cast<void*>(safePointer.getPointer()));
+	return rawPointers;
 }
 
 std::optional<void*> Session::getPointer() const
 {
 	if (size() == 1)
-		return pointers.at(0).getPointer();
+		return reinterpret_cast<void*>(pointers.begin()->getPointer());
 
 	return std::nullopt;
 }

@@ -6,16 +6,19 @@ bool SafePointer::isValid(std::size_t length) const
 {
 	if (invalid)
 		return false; // It was already eliminated
-	const MemoryRegionStorage::MemoryRegion* region = memoryRegionStorage.addressRegion(pointer);
-	if (region == nullptr)
+
+	auto optRegion = memoryRegionStorage.addressRegion(pointer);
+	if (!optRegion.has_value())
 		return false;
+	auto region = optRegion->get();
 	for (std::size_t i = 0; i < length; i++) {
-		void* cPointer = i == 0 ? pointer : add(i).pointer;
-		if (&region->addressSpace.front() <= cPointer && cPointer < &region->addressSpace.back())
+		std::uintptr_t cPointer = i == 0 ? pointer : add(i).pointer;
+		if (region.begin <= cPointer && cPointer < region.begin + region.length)
 			continue;
-		region = memoryRegionStorage.addressRegion(cPointer);
-		if (region == nullptr)
+		optRegion = memoryRegionStorage.addressRegion(cPointer);
+		if (!optRegion.has_value())
 			return false;
+		region = optRegion->get();
 	}
 	return true;
 }
@@ -42,7 +45,7 @@ SafePointer SafePointer::sub(std::size_t operand) const
 
 SafePointer SafePointer::dereference() const
 {
-	std::optional<void*> deref = read<void*>();
+	std::optional<std::uintptr_t> deref = read<std::uintptr_t>();
 	if (deref.has_value())
 		return SafePointer{ deref.value(), false };
 

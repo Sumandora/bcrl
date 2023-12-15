@@ -15,7 +15,7 @@ include(FetchContent)
 FetchContent_Declare(SignatureScanner
 	GIT_REPOSITORY https://github.com/Sumandora/SignatureScanner
 	GIT_PROGRESS TRUE
-	GIT_TAG e8f2b7b)
+	GIT_TAG 3f61a98)
 FetchContent_MakeAvailable(SignatureScanner)
 target_link_libraries(bcrl SignatureScanner)
 
