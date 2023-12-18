@@ -205,8 +205,14 @@ namespace BCRL {
 
 		// Automatic casts
 		template <typename T>
+		[[nodiscard]] std::optional<T> getPointer() const {
+			if(auto opt = getPointer(); opt.has_value())
+				return std::optional<T>{ T(opt.value()) };
+			return std::nullopt;
+		}
+		template <typename T>
 		[[nodiscard]] T expect(const std::string& message) const {
-			return reinterpret_cast<T>(expect(message));
+			return T(expect(message));
 		}
 	};
 }
