@@ -206,6 +206,18 @@ namespace BCRL {
 		[[nodiscard]] std::vector<void*> getPointers() const; // Returns all remaining pointers
 		[[nodiscard]] std::optional<void*> getPointer() const; // Will return std::nullopt if there are no/multiple pointers available
 		[[nodiscard]] void* expect(const std::string& message) const; // Same as getPointer, but throws a std::runtime_error if not present
+
+		// Automatic casts
+		template <typename T>
+		[[nodiscard]] std::optional<T> getPointer() const {
+			if(auto opt = getPointer(); opt.has_value())
+				return std::optional<T>{ T(opt.value()) };
+			return std::nullopt;
+		}
+		template <typename T>
+		[[nodiscard]] T expect(const std::string& message) const {
+			return T(expect(message));
+		}
 	};
 }
 
