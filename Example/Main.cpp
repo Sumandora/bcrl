@@ -16,12 +16,12 @@ int main()
 					.add(4)
 					.repeater([](SafePointer& ptr) { ptr = ptr.nextInstruction(); return !ptr.equals<unsigned char>('\xe8'); }) // Find next call instruction
 					.add(5)
-					.filter([](SafePointer ptr) { return ptr.equals<unsigned char>('\xe8'); }) // Verify that we have another call instruction here (This will remove the main method from the pool)
+					.filter([](const SafePointer& ptr) { return ptr.equals<unsigned char>('\xe8'); }) // Verify that we have another call instruction here (This will remove the main method from the pool)
 					.add(1)
 					.relativeToAbsolute()
 					.nextByteOccurrence("c3") // Go to return
 					.prevByteOccurrence("55 48 89 e5") // Go back to the method prolog
-					.forEach([](SafePointer ptr) { printf("anotherSecretMethod: %p\n", ptr.getPointer()); })
+					.forEach([](const SafePointer& ptr) { printf("anotherSecretMethod: %p\n", ptr.getPointer()); })
 					.expect<void (*)()>("Couldn't find anotherSecretMethod");
 
 	auto stringSearch = Session::string(strdup("I really really really really really love Linux!")).getPointer();
