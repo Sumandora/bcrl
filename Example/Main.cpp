@@ -21,7 +21,7 @@ int main()
 					.relativeToAbsolute()
 					.nextByteOccurrence("c3") // Go to return
 					.prevByteOccurrence("55 48 89 e5") // Go back to the method prolog
-					.forEach([](const SafePointer& ptr) { printf("anotherSecretMethod: %p\n", ptr.getPointer()); })
+					.forEach([](const SafePointer& ptr) { printf("anotherSecretMethod: 0x%lx\n", ptr.getPointer()); })
 					.expect<void (*)()>("Couldn't find anotherSecretMethod");
 
 	auto stringSearch = Session::string(strdup("I really really really really really love Linux!")).getPointer();
