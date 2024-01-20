@@ -39,7 +39,7 @@ SafePointer SafePointer::nextStringOccurrence(const std::string& string, std::op
 		if(code.has_value() && region.executable != code.value())
 			continue;
 
-		auto hit = signature.findNext(std::max(pointer, begin), { region.length });
+		auto hit = signature.findNext(std::max(pointer, begin), { begin + region.length });
 
 		if (!hit.has_value())
 			continue;
