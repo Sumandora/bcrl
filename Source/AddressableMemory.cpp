@@ -70,8 +70,14 @@ const std::map<std::uintptr_t /*begin address*/, MemoryRegionStorage::MemoryRegi
 
 std::optional<std::reference_wrapper<const MemoryRegionStorage::MemoryRegion>> MemoryRegionStorage::addressRegion(std::uintptr_t address) const
 {
-	auto it = memoryRegions.lower_bound(address);
-	if(it != memoryRegions.end() && it->first + it->second.length > address)
-		return it->second;
-	return std::nullopt;
+	if(memoryRegions.empty())
+		return std::nullopt;
+	auto it = memoryRegions.lower_bound(address); // This is basically one region above what we want
+	if(it == memoryRegions.begin()) // Can't go back if there is nothing to go to
+		return std::nullopt;
+	it--; // Go back one iterator
+	auto& region = it->second;
+	if(address >= region.begin + region.length) // In case we got end() because lower_bound didn't find anything
+		return std::nullopt;
+	return region;
 }
