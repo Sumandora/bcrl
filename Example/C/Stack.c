@@ -2,6 +2,7 @@
 
 #include <alloca.h>
 #include <assert.h>
+#include <dlfcn.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -27,6 +28,8 @@ void printMethod(void* safePointer, void* data) {
 // Notice how I am calling functions which haven't been declared yet
 int main()
 {
+	dlopen("libExampleTarget.so", RTLD_NOW); // Force load
+
 	const char* newString = strdup("You will never find me!"); // The compiler reuses strings when possible, so we duplicate it to force our library not to cheat
 
 	void* session = alloca(bcrl_sizeof_session);

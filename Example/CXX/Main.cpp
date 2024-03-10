@@ -2,11 +2,14 @@
 
 #include <cassert>
 #include <cstring>
+#include <dlfcn.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
 int main()
 {
+	dlopen("libExampleTarget.so", RTLD_NOW); // Force load
+
 	using namespace BCRL;
 	auto func = Session::string("You will never find me!")
 					.findXREFs("libExampleTarget.so", true, false) // main and superSecretMethod
