@@ -7,18 +7,19 @@ using namespace BCRL;
 #if defined(__x86_64) || defined(i386)
 
 constexpr bool is64Bit = sizeof(void*) == 8;
+using RelAddrType = std::conditional_t<is64Bit, int32_t, int16_t>;
 
-SafePointer SafePointer::relativeToAbsolute() const
+SafePointer& SafePointer::relativeToAbsolute()
 {
-#ifdef __x86_64
-	using RelAddrType = int32_t;
-#else
-	using RelAddrType = int16_t;
-#endif
 	std::optional<RelAddrType> offset = read<RelAddrType>();
 	if (!offset.has_value())
 		return invalidate();
-	return add(sizeof(RelAddrType)).add(offset.value());
+	auto& s = add(sizeof(RelAddrType));
+	if(offset.value() < 0)
+		s.sub(-offset.value());
+	else
+		s.add(offset.value());
+	return s;
 }
 
 #ifndef BCLR_DISABLE_LDE
@@ -27,12 +28,12 @@ SafePointer SafePointer::relativeToAbsolute() const
 
 constexpr std::size_t longestX86Insn = 15;
 
-SafePointer SafePointer::prevInstruction() const
+SafePointer& SafePointer::prevInstruction()
 {
 	// What I am doing here has no scientific backing, it just happens to work **most** of the time.
 	for (std::size_t offset = longestX86Insn * 2 /* Ensure we will pass a few instructions */; offset > 0; offset--) {
 		// The longer this for goes on, the worse/inaccurate the results will get
-		SafePointer addr = this->sub(offset);
+		SafePointer& addr = this->sub(offset);
 		std::size_t insnLength; // The last disassembled instruction
 		while (addr < *this && isValid(longestX86Insn))
 			addr = addr.add(insnLength = ldisasm(reinterpret_cast<const void*>(pointer), is64Bit));
@@ -46,7 +47,7 @@ SafePointer SafePointer::prevInstruction() const
 	return invalidate();
 }
 
-SafePointer SafePointer::nextInstruction() const
+SafePointer& SafePointer::nextInstruction()
 {
 	if (isValid(longestX86Insn))
 		return add(ldisasm(reinterpret_cast<const void*>(pointer), is64Bit));

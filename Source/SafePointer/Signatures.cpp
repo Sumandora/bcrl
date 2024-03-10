@@ -6,15 +6,15 @@
 
 using namespace BCRL;
 
-SafePointer SafePointer::prevByteOccurrence(const std::string& signature, std::optional<bool> code) const
+SafePointer& SafePointer::prevByteOccurrence(const std::string& signature, char wildcard, std::optional<bool> code)
 {
-	SignatureScanner::ByteSignature convertedSignature{ signature };
+	SignatureScanner::ByteSignature convertedSignature{ signature, wildcard };
 
-	for(const auto& [begin, region] : std::ranges::reverse_view(memoryRegionStorage.getMemoryRegions())) {
+	for (const auto& [begin, region] : std::ranges::reverse_view(memoryRegionStorage.getMemoryRegions())) {
 		if (begin > pointer)
 			continue;
 
-		if(code.has_value() && region.executable != code.value())
+		if (code.has_value() && region.executable != code.value())
 			continue;
 
 		auto hit = convertedSignature.findPrev(std::min(pointer, begin + region.length), { begin });
@@ -22,21 +22,22 @@ SafePointer SafePointer::prevByteOccurrence(const std::string& signature, std::o
 		if (!hit.has_value())
 			continue;
 
-		return SafePointer{ hit.value(), false };
+		pointer = hit.value();
+		return revalidate();
 	}
 
 	return invalidate();
 }
 
-SafePointer SafePointer::nextByteOccurrence(const std::string& signature, std::optional<bool> code) const
+SafePointer& SafePointer::nextByteOccurrence(const std::string& signature, char wildcard, std::optional<bool> code)
 {
-	SignatureScanner::ByteSignature convertedSignature{ signature };
+	SignatureScanner::ByteSignature convertedSignature{ signature, wildcard };
 
 	for (const auto& [begin, region] : memoryRegionStorage.getMemoryRegions()) {
 		if (begin + region.length < pointer)
 			continue;
 
-		if(code.has_value() && region.executable != code.value())
+		if (code.has_value() && region.executable != code.value())
 			continue;
 
 		auto hit = convertedSignature.findNext(std::max(pointer, begin), { begin + region.length });
@@ -44,15 +45,16 @@ SafePointer SafePointer::nextByteOccurrence(const std::string& signature, std::o
 		if (!hit.has_value())
 			continue;
 
-		return SafePointer{ hit.value(), false };
+		pointer = hit.value();
+		return revalidate();
 	}
 
 	return invalidate();
 }
 
-bool SafePointer::doesMatch(const std::string& signature) const
+bool SafePointer::doesMatch(const std::string& signature, char wildcard) const
 {
-	SignatureScanner::ByteSignature convertedSignature{ signature };
+	SignatureScanner::ByteSignature convertedSignature{ signature, wildcard };
 	if (isValid(convertedSignature.length()))
 		return convertedSignature.doesMatch(pointer);
 	return false;

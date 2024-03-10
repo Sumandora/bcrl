@@ -2,9 +2,10 @@
 
 using namespace BCRL;
 
-Session Session::setSafety(bool newSafeness) const
+Session& Session::setSafety(bool newSafeness)
 {
-	return { pointers, newSafeness };
+	safe = newSafeness;
+	return *this;
 }
 
 bool Session::isSafe() const
@@ -12,7 +13,8 @@ bool Session::isSafe() const
 	return safe;
 }
 
-Session Session::toggleSafety() const
+Session& Session::toggleSafety()
 {
-	return { pointers, !isSafe() };
+	safe = !safe;
+	return *this;
 }

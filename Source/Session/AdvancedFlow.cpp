@@ -4,74 +4,65 @@
 
 using namespace BCRL;
 
-Session Session::purgeInvalid(std::size_t length) const
+Session& Session::purgeInvalid(std::size_t length)
 {
-	return map([length](const SafePointer& safePointer) {
-		if (safePointer.isValid(length))
-			return safePointer;
-		return safePointer.invalidate();
+	return forEach([length](SafePointer& safePointer) {
+		if (!safePointer.isValid(length))
+			safePointer.invalidate();
 	});
 }
 
-Session Session::forEach(const std::function<void(SafePointer&)>& action) const
+Session& Session::forEach(const std::function<void(SafePointer&)>& body)
 {
-	return repeater([action](SafePointer& safePointer) {
-		action(safePointer);
-		return false;
-	});
+	// This looks a bit scuffed, but I'm pretty sure it is the most memory-efficient way of doing it
+	auto it = pointers.begin();
+	while (it != pointers.end()) {
+		SafePointer& safePointer = *it;
+		body(safePointer);
+		if (isSafe() && !safePointer.isValid())
+			it = pointers.erase(it); // We are in safe mode and the pointer isn't valid, remove it
+		else
+			it++;
+	}
+	return *this;
 }
 
-Session Session::repeater(const std::function<bool(SafePointer&)>& action) const
+Session& Session::repeater(const std::function<bool(SafePointer&)>& action)
 {
-	return map([action](SafePointer safePointer) {
+	return forEach([action](SafePointer& safePointer) {
 		while (action(safePointer))
 			;
-		return safePointer;
 	});
 }
 
-Session Session::repeater(std::size_t iterations, const std::function<void(SafePointer&)>& action) const
+Session& Session::repeater(std::size_t iterations, const std::function<void(SafePointer&)>& action)
 {
-	return map([iterations, action](SafePointer safePointer) {
+	return forEach([iterations, action](SafePointer& safePointer) {
 		for (std::size_t i = 0; i < iterations; i++)
 			action(safePointer);
-		return safePointer;
 	});
 }
 
-Session Session::filter(const std::function<bool(const SafePointer&)>& predicate) const
+Session& Session::filter(const std::function<bool(const SafePointer&)>& predicate)
 {
-	return map([predicate](const SafePointer& safePointer) {
-		if (predicate(safePointer))
-			return safePointer;
-		return safePointer.invalidate();
+	return forEach([predicate](SafePointer& safePointer) {
+		if (!predicate(safePointer))
+			safePointer.invalidate();
 	});
 }
 
-Session Session::map(const std::function<SafePointer(const SafePointer&)>& transformer) const
+Session& Session::flatMap(const std::function<std::vector<SafePointer>(const SafePointer&)>& transformer)
 {
-	std::unordered_set<SafePointer, SafePointer::Hash> safePointerSet;
-	for (SafePointer safePointer : pointers) {
-		SafePointer newSafePointer = transformer(safePointer);
-		if (isSafe() && !newSafePointer.isValid())
-			continue; // We are in safe mode and the pointer isn't valid, remove it
+	std::vector<SafePointer> newSafePointers;
+	for (SafePointer& safePointer : pointers) {
+		auto transformed = transformer(safePointer);
+		for(SafePointer& newSafePointer : transformed) {
+			if(isSafe() && !newSafePointer.isValid())
+				continue;
 
-		safePointerSet.insert(newSafePointer);
-	}
-	return { safePointerSet, isSafe() };
-}
-
-Session Session::flatMap(const std::function<std::vector<SafePointer>(const SafePointer&)>& transformer) const
-{
-	std::unordered_set<SafePointer, SafePointer::Hash> safePointerSet;
-	for (SafePointer safePointer : pointers) {
-		std::vector<SafePointer> newSafePointers = transformer(safePointer);
-		for (const SafePointer& newSafePointer : newSafePointers) {
-			if (isSafe() && !newSafePointer.isValid())
-				continue; // We are in safe mode and the pointer isn't valid, remove it
-
-			safePointerSet.insert(newSafePointer);
+			newSafePointers.emplace_back(newSafePointer);
 		}
 	}
-	return { safePointerSet, isSafe() };
+	pointers = newSafePointers;
+	return *this;
 }

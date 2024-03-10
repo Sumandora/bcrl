@@ -51,14 +51,21 @@ namespace BCRL {
 
 		[[nodiscard]] bool isValid(std::size_t length = 1) const;
 
+		[[nodiscard]] inline bool read(void* to, size_t len) const
+		{
+			if (isValid(len)) {
+				std::memcpy(to, reinterpret_cast<const void*>(pointer), len);
+				return true;
+			}
+			return false;
+		}
+
 		template <typename T> requires std::is_trivially_copyable_v<T>
 		[[nodiscard]] inline std::optional<T> read() const
 		{
-			if (isValid(sizeof(T*))) {
-				T obj;
-				std::memcpy(&obj, reinterpret_cast<const void*>(pointer), sizeof(T));
+			T obj;
+			if(read(&obj, sizeof(T)))
 				return obj;
-			}
 			return std::nullopt;
 		}
 
@@ -71,32 +78,35 @@ namespace BCRL {
 			return false;
 		}
 
-		[[nodiscard]] SafePointer invalidate() const; // Marks safe pointer as invalid
-		[[nodiscard]] SafePointer revalidate() const; // Marks safe pointer as valid
+		SafePointer& invalidate(); // Marks safe pointer as invalid
+		SafePointer& revalidate(); // Marks safe pointer as valid
 
 		// Manipulation
-		[[nodiscard]] SafePointer add(std::size_t operand) const; // Advances all pointers forward
-		[[nodiscard]] SafePointer sub(std::size_t operand) const; // Inverse of above
-		[[nodiscard]] SafePointer dereference() const; // Follows a pointer
+		SafePointer& add(std::size_t operand); // Advances all pointers forward
+		SafePointer& sub(std::size_t operand); // Inverse of above
+		SafePointer& dereference(); // Follows a pointer
 
 		// X86
 #if defined(__x86_64) || defined(i386)
-		[[nodiscard]] SafePointer relativeToAbsolute() const; // Follows down a relative offset
+		SafePointer& relativeToAbsolute(); // Follows down a relative offset
 
-		[[nodiscard]] SafePointer prevInstruction() const; // WARNING: X86 can't be disassembled backwards properly, use with caution
-		[[nodiscard]] SafePointer nextInstruction() const; // Skips the current X86 instruction
+		SafePointer& prevInstruction(); // WARNING: X86 can't be disassembled backwards properly, use with caution
+		SafePointer& nextInstruction(); // Skips the current X86 instruction
 
 		[[nodiscard]] std::vector<SafePointer> findXREFs(bool relative = true, bool absolute = true) const; // Since there can be multiple xrefs, this can increase the amount of addresses
 		[[nodiscard]] std::vector<SafePointer> findXREFs(const std::string& moduleName, bool relative = true, bool absolute = true) const; // Same as above but limited to a single module
 #endif
 		// Signatures
-		[[nodiscard]] SafePointer prevByteOccurrence(const std::string& signature, std::optional<bool> code = std::nullopt) const; // Last occurrence of signature
-		[[nodiscard]] SafePointer nextByteOccurrence(const std::string& signature, std::optional<bool> code = std::nullopt) const; // Next occurrence of signature
-		[[nodiscard]] bool doesMatch(const std::string& signature) const; // Tests if the given signature matches the current address
+		SafePointer& prevByteOccurrence(const std::string& signature, char wildcard = '?', std::optional<bool> code = std::nullopt); // Last occurrence of signature
+		SafePointer& nextByteOccurrence(const std::string& signature, char wildcard = '?', std::optional<bool> code = std::nullopt); // Next occurrence of signature
+		[[nodiscard]] bool doesMatch(const std::string& signature, char wildcard = '?') const; // Tests if the given signature matches the current address
 
 		// Strings
-		[[nodiscard]] SafePointer prevStringOccurrence(const std::string& string, std::optional<bool> code = std::nullopt) const; // Prev occurrence of string
-		[[nodiscard]] SafePointer nextStringOccurrence(const std::string& string, std::optional<bool> code = std::nullopt) const; // Next occurrence of string
+		SafePointer& prevStringOccurrence(const std::string& string, std::optional<char> wildcard = std::nullopt); // Prev occurrence of string
+		SafePointer& nextStringOccurrence(const std::string& string, std::optional<char> wildcard = std::nullopt); // Next occurrence of string
+
+		// Filters
+		[[nodiscard]] bool isInModule(const std::string& moduleName) const;
 
 		inline std::strong_ordering operator<=>(const SafePointer& other) const
 		{
@@ -113,21 +123,14 @@ namespace BCRL {
 		{
 			return pointer;
 		};
-
-		struct Hash {
-			inline std::size_t operator()(const SafePointer& s) const noexcept
-			{
-				return std::hash<decltype(s.pointer)>{}(s.pointer);
-			}
-		};
 	};
 
 	class Session {
-		std::unordered_set<SafePointer, SafePointer::Hash> pointers{};
+		std::vector<SafePointer> pointers;
 
 		bool safe; // Are we using safety measures?
 
-		inline Session(std::unordered_set<SafePointer, SafePointer::Hash>&& pointers, bool safe)
+		inline Session(std::vector<SafePointer>&& pointers, bool safe)
 			: pointers(std::move(pointers))
 			, safe(safe)
 		{
@@ -137,17 +140,17 @@ namespace BCRL {
 			: pointers()
 			, safe(safe)
 		{
+			this->pointers.reserve(pointers.size());
 			for (auto pointer : pointers) {
-				this->pointers.emplace(pointer);
+				this->pointers.emplace_back(pointer);
 			}
 		}
 		inline Session(std::uintptr_t pointer, bool safe)
-			: pointers()
+			: pointers({ SafePointer(pointer) })
 			, safe(safe)
 		{
-			pointers.emplace(pointer);
 		}
-		inline explicit Session(bool safe)
+		inline explicit Session(bool safe = true)
 			: pointers()
 			, safe(safe)
 		{
@@ -157,52 +160,54 @@ namespace BCRL {
 		Session() = delete;
 
 		// Openers
-		[[nodiscard]] static Session signature(const char* signature, std::optional<bool> code = std::nullopt);
-		[[nodiscard]] static Session module(const char* moduleName);
-		[[nodiscard]] static Session string(const char* string);
+		[[nodiscard]] static Session signature(const std::string& signature, char wildcard = '?', std::optional<bool> code = std::nullopt);
+		[[nodiscard]] static Session module(const std::string& moduleName);
+		[[nodiscard]] static Session string(const std::string& string, std::optional<char> wildcard = std::nullopt);
 		[[nodiscard]] static Session pointerList(const std::vector<void*>& pointers);
 		[[nodiscard]] static Session pointer(void* pointer);
 		[[nodiscard]] static Session pointerArray(void* array, std::size_t index); // e.g. Virtual function tables
 
 		// Manipulation
-		[[nodiscard]] Session add(std::size_t operand) const; // Advances all pointers forward
-		[[nodiscard]] Session sub(std::size_t operand) const; // Inverse of above
-		[[nodiscard]] Session dereference() const; // Follows a pointer
+		Session& add(std::size_t operand); // Advances all pointers forward
+		Session& sub(std::size_t operand); // Inverse of above
+		Session& dereference(); // Follows a pointer
 
 		// Safety
-		[[nodiscard]] Session setSafety(bool newSafeness) const;
+		Session& setSafety(bool newSafeness);
 		[[nodiscard]] bool isSafe() const;
-		[[nodiscard]] Session toggleSafety() const;
+		Session& toggleSafety();
 
 		// X86
 #if defined(__x86_64) || defined(i386)
-		[[nodiscard]] Session relativeToAbsolute() const; // Follows down a relative offset
+		Session& relativeToAbsolute(); // Follows down a relative offset
 
-		[[nodiscard]] Session prevInstruction() const; // WARNING: X86 can't be disassembled backwards properly, use with caution
-		[[nodiscard]] Session nextInstruction() const; // Skips the current X86 instruction
+		Session& prevInstruction(); // WARNING: X86 can't be disassembled backwards properly, use with caution
+		Session& nextInstruction(); // Skips the current X86 instruction
 
-		[[nodiscard]] Session findXREFs(bool relative = true, bool absolute = true) const; // Since there can be multiple xrefs, this can increase the amount of addresses
-		[[nodiscard]] Session findXREFs(const std::string& moduleName, bool relative = true, bool absolute = true) const; // Same as above but limited to a single module
+		Session& findXREFs(bool relative = true, bool absolute = true); // Since there can be multiple xrefs, this can increase the amount of addresses
+		Session& findXREFs(const std::string& moduleName, bool relative = true, bool absolute = true); // Same as above but limited to a single module
 #endif
 		// Signatures
-		[[nodiscard]] Session prevByteOccurrence(const std::string& signature, std::optional<bool> code = std::nullopt) const; // Prev occurrence of signature
-		[[nodiscard]] Session nextByteOccurrence(const std::string& signature, std::optional<bool> code = std::nullopt) const; // Next occurrence of signature
+		Session& prevByteOccurrence(const std::string& signature, char wildcard = '?', std::optional<bool> code = std::nullopt); // Prev occurrence of signature
+		Session& nextByteOccurrence(const std::string& signature, char wildcard = '?', std::optional<bool> code = std::nullopt); // Next occurrence of signature
 
 		// Strings
-		[[nodiscard]] Session prevStringOccurrence(const std::string& string) const; // Prev occurrence of string
-		[[nodiscard]] Session nextStringOccurrence(const std::string& string) const; // Next occurrence of string
+		Session& prevStringOccurrence(const std::string& string, std::optional<char> wildcard = std::nullopt); // Prev occurrence of string
+		Session& nextStringOccurrence(const std::string& string, std::optional<char> wildcard = std::nullopt); // Next occurrence of string
+
+		// Filters
+		Session& filterModule(const std::string& moduleName);
 
 		// Advanced Flow
-		[[nodiscard]] Session purgeInvalid(std::size_t length = 1) const; // Will purge all pointers, which can't be dereferenced (Useful when using unsafe mode)
-		[[nodiscard]] Session forEach(const std::function<void(SafePointer&)>& action) const; // Calls action on each pointer
-		[[nodiscard]] Session repeater(const std::function<bool(SafePointer&)>& action) const; // Repeats action until false is returned
-		[[nodiscard]] Session repeater(std::size_t iterations, const std::function<void(SafePointer&)>& action) const; // Repeats action `iterations` times
-		[[nodiscard]] Session filter(const std::function<bool(const SafePointer&)>& predicate) const; // Filters out non-conforming pointers
-		[[nodiscard]] Session map(const std::function<SafePointer(const SafePointer&)>& transformer) const; // Maps pointer to other pointer
-		[[nodiscard]] Session flatMap(const std::function<std::vector<SafePointer>(const SafePointer&)>& transformer) const; // Maps pointer to other pointers
+		Session& purgeInvalid(std::size_t length = 1); // Will purge all pointers, which can't be dereferenced (Useful when using unsafe mode)
+		Session& forEach(const std::function<void(SafePointer&)>& body); // Calls action on each pointer
+		Session& repeater(const std::function<bool(SafePointer&)>& action); // Repeats action until false is returned
+		Session& repeater(std::size_t iterations, const std::function<void(SafePointer&)>& action); // Repeats action `iterations` times
+		Session& filter(const std::function<bool(const SafePointer&)>& predicate); // Filters out non-conforming pointers
+		Session& flatMap(const std::function<std::vector<SafePointer>(const SafePointer&)>& transformer); // Maps pointer to other pointers
 
 		// Finalizing
-		[[nodiscard]] inline std::size_t size() const; // Returns size of remaining pointers
+		[[nodiscard]] std::size_t size() const; // Returns size of remaining pointers
 		[[nodiscard]] std::vector<void*> getPointers() const; // Returns all remaining pointers
 		[[nodiscard]] std::optional<void*> getPointer() const; // Will return std::nullopt if there are no/multiple pointers available
 		[[nodiscard]] void* expect(const std::string& message) const; // Same as getPointer, but throws a std::runtime_error if not present

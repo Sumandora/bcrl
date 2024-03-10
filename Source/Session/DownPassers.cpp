@@ -2,54 +2,54 @@
 
 using namespace BCRL;
 
-Session Session::add(std::size_t operand) const
+Session& Session::add(std::size_t operand)
 {
-	return map([operand](const SafePointer& safePointer) {
-		return safePointer.add(operand);
+	return forEach([operand](SafePointer& safePointer) {
+		safePointer.add(operand);
 	});
 }
-Session Session::sub(std::size_t operand) const
+Session& Session::sub(std::size_t operand)
 {
-	return map([operand](const SafePointer& safePointer) {
-		return safePointer.sub(operand);
+	return forEach([operand](SafePointer& safePointer) {
+		safePointer.sub(operand);
 	});
 }
-Session Session::dereference() const
+Session& Session::dereference()
 {
-	return map([](const SafePointer& safePointer) {
-		return safePointer.dereference();
+	return forEach([](SafePointer& safePointer) {
+		safePointer.dereference();
 	});
 }
 
 #if defined(__x86_64) || defined(i386)
-Session Session::relativeToAbsolute() const
+Session& Session::relativeToAbsolute()
 {
-	return map([](const SafePointer& safePointer) {
-		return safePointer.relativeToAbsolute();
+	return forEach([](SafePointer& safePointer) {
+		safePointer.relativeToAbsolute();
 	});
 }
 
-Session Session::prevInstruction() const
+Session& Session::prevInstruction()
 {
-	return map([](const SafePointer& safePointer) {
-		return safePointer.prevInstruction();
+	return forEach([](SafePointer& safePointer) {
+		safePointer.prevInstruction();
 	});
 }
-Session Session::nextInstruction() const
+Session& Session::nextInstruction()
 {
-	return map([](const SafePointer& safePointer) {
-		return safePointer.nextInstruction();
+	return forEach([](SafePointer& safePointer) {
+		safePointer.nextInstruction();
 	});
 }
 
-Session Session::findXREFs(bool relative, bool absolute) const
+Session& Session::findXREFs(bool relative, bool absolute)
 {
 	return flatMap([relative, absolute](const SafePointer& safePointer) {
 		return safePointer.findXREFs(relative, absolute);
 	});
 }
 
-Session Session::findXREFs(const std::string& moduleName, bool relative, bool absolute) const
+Session& Session::findXREFs(const std::string& moduleName, bool relative, bool absolute)
 {
 	return flatMap([&moduleName, relative, absolute](const SafePointer& safePointer) {
 		return safePointer.findXREFs(moduleName, relative, absolute);
@@ -57,28 +57,35 @@ Session Session::findXREFs(const std::string& moduleName, bool relative, bool ab
 }
 #endif
 
-Session Session::prevByteOccurrence(const std::string& signature, std::optional<bool> code) const
+Session& Session::prevByteOccurrence(const std::string& signature, char wildcard, std::optional<bool> code)
 {
-	return map([&signature, &code](const SafePointer& safePointer) {
-		return safePointer.prevByteOccurrence(signature, code);
+	return forEach([&signature, wildcard, &code](SafePointer& safePointer) {
+		safePointer.prevByteOccurrence(signature, wildcard, code);
 	});
 }
-Session Session::nextByteOccurrence(const std::string& signature, std::optional<bool> code) const
+Session& Session::nextByteOccurrence(const std::string& signature, char wildcard, std::optional<bool> code)
 {
-	return map([&signature, &code](const SafePointer& safePointer) {
-		return safePointer.nextByteOccurrence(signature, code);
+	return forEach([&signature, wildcard, &code](SafePointer& safePointer) {
+		safePointer.nextByteOccurrence(signature, wildcard, code);
 	});
 }
 
-Session Session::prevStringOccurrence(const std::string& string) const
+Session& Session::prevStringOccurrence(const std::string& string, std::optional<char> wildcard)
 {
-	return map([&string](const SafePointer& safePointer) {
-		return safePointer.prevStringOccurrence(string);
+	return forEach([&string, wildcard](SafePointer& safePointer) {
+		safePointer.prevStringOccurrence(string, wildcard);
 	});
 }
-Session Session::nextStringOccurrence(const std::string& string) const
+Session& Session::nextStringOccurrence(const std::string& string, std::optional<char> wildcard)
 {
-	return map([&string](const SafePointer& safePointer) {
-		return safePointer.nextStringOccurrence(string);
+	return forEach([&string, wildcard](SafePointer& safePointer) {
+		return safePointer.nextStringOccurrence(string, wildcard);
+	});
+}
+
+Session& Session::filterModule(const std::string& moduleName)
+{
+	return filter([&moduleName](const SafePointer& safePointer) {
+		return safePointer.isInModule(moduleName);
 	});
 }

@@ -15,7 +15,7 @@ include(FetchContent)
 FetchContent_Declare(SignatureScanner
 	GIT_REPOSITORY https://github.com/Sumandora/SignatureScanner
 	GIT_PROGRESS TRUE
-	GIT_TAG 3f61a98)
+	GIT_TAG f9b8154)
 FetchContent_MakeAvailable(SignatureScanner)
 target_link_libraries(bcrl SignatureScanner)
 
@@ -27,10 +27,6 @@ FetchContent_MakeAvailable(LengthDisassembler)
 target_link_libraries(bcrl length-disassembler)
 
 if(PROJECT_IS_TOP_LEVEL)
-	add_executable(bcrlExample "${PROJECT_SOURCE_DIR}/Example/Main.cpp")
-	target_link_libraries(bcrlExample PRIVATE bcrl)
-	target_compile_features(bcrlExample PRIVATE cxx_std_20) # The header uses <span> which is c++20
-
 	enable_testing()
-	add_test(NAME bcrlExample COMMAND $<TARGET_FILE:bcrlExample>)
+	add_subdirectory("Example")
 endif()

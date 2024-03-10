@@ -72,7 +72,7 @@ std::optional<std::reference_wrapper<const MemoryRegionStorage::MemoryRegion>> M
 {
 	if(memoryRegions.empty())
 		return std::nullopt;
-	auto it = memoryRegions.lower_bound(address); // This is basically one region above what we want
+	auto it = memoryRegions.upper_bound(address); // This is basically one region above what we want
 	if(it == memoryRegions.begin()) // Can't go back if there is nothing to go to
 		return std::nullopt;
 	it--; // Go back one iterator

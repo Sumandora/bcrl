@@ -12,8 +12,8 @@ bool SafePointer::isValid(std::size_t length) const
 		return false;
 	auto region = optRegion->get();
 	for (std::size_t i = 0; i < length; i++) {
-		std::uintptr_t cPointer = i == 0 ? pointer : add(i).pointer;
-		if (region.begin <= cPointer && cPointer < region.begin + region.length)
+		std::uintptr_t cPointer = pointer + i;
+		if (cPointer >= region.begin && cPointer < region.begin + region.length)
 			continue;
 		optRegion = memoryRegionStorage.addressRegion(cPointer);
 		if (!optRegion.has_value())
@@ -23,31 +23,36 @@ bool SafePointer::isValid(std::size_t length) const
 	return true;
 }
 
-SafePointer SafePointer::invalidate() const
+SafePointer& SafePointer::invalidate()
 {
-	return SafePointer{ pointer, true };
+	invalid = true;
+	return *this;
 }
 
-SafePointer SafePointer::revalidate() const
+SafePointer& SafePointer::revalidate()
 {
-	return SafePointer{ pointer, false };
+	invalid = false;
+	return *this;
 }
 
-SafePointer SafePointer::add(std::size_t operand) const
+SafePointer& SafePointer::add(std::size_t operand)
 {
-	return SafePointer{ reinterpret_cast<std::uintptr_t>(pointer) + operand, invalid };
+	pointer += operand;
+	return *this;
 }
 
-SafePointer SafePointer::sub(std::size_t operand) const
+SafePointer& SafePointer::sub(std::size_t operand)
 {
-	return SafePointer{ reinterpret_cast<std::uintptr_t>(pointer) - operand, invalid };
+	pointer -= operand;
+	return *this;
 }
 
-SafePointer SafePointer::dereference() const
+SafePointer& SafePointer::dereference()
 {
 	std::optional<std::uintptr_t> deref = read<std::uintptr_t>();
-	if (deref.has_value())
-		return SafePointer{ deref.value(), false };
-
-	return invalidate();
+	if (deref.has_value()) {
+		pointer = deref.value();
+		return revalidate();
+	} else
+		return invalidate();
 }

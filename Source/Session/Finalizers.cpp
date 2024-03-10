@@ -12,7 +12,7 @@ std::size_t Session::size() const
 std::vector<void*> Session::getPointers() const
 {
 	std::vector<void*> rawPointers{};
-	for (SafePointer safePointer : pointers)
+	for (const SafePointer& safePointer : pointers)
 		rawPointers.push_back(reinterpret_cast<void*>(safePointer.getPointer()));
 	return rawPointers;
 }
