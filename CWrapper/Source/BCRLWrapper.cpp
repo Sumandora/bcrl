@@ -173,6 +173,10 @@ void bcrl_session_pointerArray(void* session, void* array, size_t index)
 	new (session) Session{ Session::pointerArray(array, index) };
 }
 
+void bcrl_session_copy(const void* from, void* to) {
+	new (to) Session{ *static_cast<const Session*>(from) };
+}
+
 void* bcrl_session_add(void* session, size_t operand)
 {
 	return &static_cast<Session*>(session)->add(operand);

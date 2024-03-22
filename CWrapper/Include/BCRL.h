@@ -59,6 +59,8 @@ void bcrl_session_pointerList(void* session, void** pointers, size_t list_length
 void bcrl_session_pointer(void* session, void* pointer);
 void bcrl_session_pointerArray(void* session, void* array, size_t index);
 
+void bcrl_session_copy(const void* from, void* to);
+
 void* bcrl_session_add(void* session, size_t operand);
 void* bcrl_session_sub(void* session, size_t operand);
 
