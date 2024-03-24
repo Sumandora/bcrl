@@ -15,6 +15,10 @@ void bcrl_construct_safepointer(void* safepointer, void* pointer, bool invalid)
 	new (safepointer) SafePointer(pointer, invalid);
 }
 
+void bcrl_safepointer_copy(const void* from, void* to) {
+	new (to) SafePointer{ *static_cast<const SafePointer*>(from) };
+}
+
 bool bcrl_safepointer_is_valid(const void* safepointer, size_t length)
 {
 	return static_cast<const SafePointer*>(safepointer)->isValid(length);

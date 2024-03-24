@@ -14,6 +14,8 @@ extern const size_t bcrl_sizeof_session;
 
 void bcrl_construct_safepointer(void* safepointer, void* pointer, bool invalid /*= false*/);
 
+void bcrl_safepointer_copy(const void* from, void* to);
+
 bool bcrl_safepointer_is_valid(const void* safepointer, size_t length);
 bool bcrl_safepointer_read(const void* safepointer, void* to, size_t length); // Returns true when successful
 
