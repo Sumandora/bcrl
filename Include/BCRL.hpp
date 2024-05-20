@@ -1,70 +1,104 @@
 #ifndef BCRL_HPP
 #define BCRL_HPP
 
-#include <optional>
-#include <map>
 #include <cstdint>
-#include <string>
 #include <cstring>
-#include <vector>
-#include <unordered_set>
 #include <functional>
+#include <map>
+#include <optional>
+#include <string>
+#include <unordered_set>
+#include <vector>
+#include <ranges>
+#include <iterator>
+
+#include "MemoryManager/MemoryManager.hpp"
+#include "SignatureScanner/PatternSignature.hpp"
 
 namespace BCRL {
-	inline class MemoryRegionStorage {
-	public:
-		struct MemoryRegion {
-			std::uintptr_t begin;
-			size_t length;
-			bool executable;
-			std::optional<std::string> name;
+	namespace detail {
+		template<typename T>
+		struct LambdaInserter {
+			std::function<void(T)> callback;
+
+			constexpr explicit LambdaInserter(std::function<void(T)> callback)
+				: callback(std::move(callback))
+			{
+			}
+
+			constexpr LambdaInserter& operator=(const T& obj) {
+				callback(obj);
+				return *this;
+			}
+
+			constexpr LambdaInserter& operator*() {
+				return *this;
+			}
+
+			constexpr LambdaInserter& operator+() {
+				return *this;
+			}
+
+			constexpr LambdaInserter& operator+(int) {
+				return *this;
+			}
 		};
-
-	private:
-		std::map<std::uintptr_t /*begin address*/, MemoryRegion> memoryRegions{};
-
-	public:
-		MemoryRegionStorage();
-		bool update(); // To update memory regions call this (for example on dlopen/dlclose calls)
-
-		[[nodiscard]] const std::map<std::uintptr_t /*begin address*/, MemoryRegion>& getMemoryRegions() const;
-		[[nodiscard]] std::optional<std::reference_wrapper<const MemoryRegion>> addressRegion(std::uintptr_t address) const;
-
-	} memoryRegionStorage;
+	}
 
 	class SafePointer { // A pointer which can't cause read access violations
+		const MemoryManager::MemoryManager* memoryManager;
 		std::uintptr_t pointer;
 		bool invalid; // Set to true, when an operation failed
 
 	public:
 		SafePointer() = delete;
-		inline explicit SafePointer(void* pointer, bool invalid = false)
-			: pointer(reinterpret_cast<std::uintptr_t>(pointer))
+		inline explicit SafePointer(const MemoryManager::MemoryManager* memoryManager, void* pointer, bool invalid = false)
+			: memoryManager(memoryManager)
+			, pointer(reinterpret_cast<std::uintptr_t>(pointer))
 			, invalid(invalid)
 		{
 		}
-		inline explicit SafePointer(std::uintptr_t pointer, bool invalid = false)
-			: pointer(pointer)
+		inline explicit SafePointer(const MemoryManager::MemoryManager* memoryManager, std::uintptr_t pointer, bool invalid = false)
+			: memoryManager(memoryManager)
+			, pointer(pointer)
 			, invalid(invalid)
 		{
 		}
 
-		[[nodiscard]] bool isValid(std::size_t length = 1) const;
+		[[nodiscard]] bool isValid(std::size_t length = 1) const
+		{
+			if (invalid)
+				return false; // It was already eliminated
+
+			auto region = memoryManager->getLayout().findRegion(pointer);
+			if (!region || !region->getFlags().isReadable())
+				return false;
+			for (std::size_t i = 0; i < length; i++) {
+				std::uintptr_t p = pointer + i;
+				if (region->isInside(p))
+					continue;
+				region = memoryManager->getLayout().findRegion(p);
+				if (!region || !region->getFlags().isReadable())
+					return false;
+			}
+			return true;
+		}
 
 		[[nodiscard]] inline bool read(void* to, size_t len) const
 		{
 			if (isValid(len)) {
-				std::memcpy(to, reinterpret_cast<const void*>(pointer), len);
+				memoryManager->read(pointer, to, len);
 				return true;
 			}
 			return false;
 		}
 
-		template <typename T> requires std::is_trivially_copyable_v<T>
+		template <typename T>
+			requires std::is_trivially_copyable_v<T>
 		[[nodiscard]] inline std::optional<T> read() const
 		{
 			T obj;
-			if(read(&obj, sizeof(T)))
+			if (read(&obj, sizeof(T)))
 				return obj;
 			return std::nullopt;
 		}
@@ -78,146 +112,427 @@ namespace BCRL {
 			return false;
 		}
 
-		SafePointer& invalidate(); // Marks safe pointer as invalid
-		SafePointer& revalidate(); // Marks safe pointer as valid
+		SafePointer& invalidate()  // Marks safe pointer as invalid
+		{
+			invalid = true;
+			return *this;
+		}
+		SafePointer& revalidate() // Marks safe pointer as valid
+		{
+			invalid = false;
+			return *this;
+		}
 
 		// Manipulation
-		SafePointer& add(std::size_t operand); // Advances all pointers forward
-		SafePointer& sub(std::size_t operand); // Inverse of above
-		SafePointer& dereference(); // Follows a pointer
+		SafePointer& add(std::size_t operand) // Advances all pointers forward
+		{
+			pointer += operand;
+			return *this;
+		}
+		SafePointer& sub(std::size_t operand) // Inverse of above
+		{
+			pointer -= operand;
+			return *this;
+		}
+		SafePointer& dereference() // Follows a pointer
+		{
+			std::optional<std::uintptr_t> deref = read<std::uintptr_t>();
+			if (deref.has_value()) {
+				pointer = deref.value();
+				return revalidate();
+			} else
+				return invalidate();
+		}
 
-		// X86
-#if defined(__x86_64) || defined(i386)
-		SafePointer& relativeToAbsolute(); // Follows down a relative offset
-
-		SafePointer& prevInstruction(); // WARNING: X86 can't be disassembled backwards properly, use with caution
-		SafePointer& nextInstruction(); // Skips the current X86 instruction
-
-		[[nodiscard]] std::vector<SafePointer> findXREFs(bool relative = true, bool absolute = true) const; // Since there can be multiple xrefs, this can increase the amount of addresses
-		[[nodiscard]] std::vector<SafePointer> findXREFs(const std::string& moduleName, bool relative = true, bool absolute = true) const; // Same as above but limited to a single module
-#endif
 		// Signatures
-		SafePointer& prevByteOccurrence(const std::string& signature, char wildcard = '?', std::optional<bool> code = std::nullopt); // Last occurrence of signature
-		SafePointer& nextByteOccurrence(const std::string& signature, char wildcard = '?', std::optional<bool> code = std::nullopt); // Next occurrence of signature
-		[[nodiscard]] bool doesMatch(const std::string& signature, char wildcard = '?') const; // Tests if the given signature matches the current address
+		// Prev occurrence of signature
+		template <typename DerivedSignature> requires std::is_base_of_v<SignatureScanner::Signature, DerivedSignature>
+		SafePointer& prevSignatureOccurrence(const DerivedSignature& signature, std::optional<bool> executable = std::nullopt)
+		{
+			for (const auto& region : memoryManager->getLayout() | std::ranges::views::reverse) {
+				if (region.getBeginAddress() >= pointer)
+					continue;
 
-		// Strings
-		SafePointer& prevStringOccurrence(const std::string& string, std::optional<char> wildcard = std::nullopt); // Prev occurrence of string
-		SafePointer& nextStringOccurrence(const std::string& string, std::optional<char> wildcard = std::nullopt); // Next occurrence of string
+				if (!region.getFlags().isReadable() || region.isSpecial())
+					continue;
+
+				if (!executable.has_value() || region.getFlags().isExecutable() == executable)
+					continue;
+
+				auto search = [&](auto begin, auto end) {
+					while(begin != reinterpret_cast<std::byte*>(pointer))
+						begin++;
+
+					auto hit = signature.prev(begin, end());
+					return hit;
+				};
+
+				if(memoryManager->isRemoteAddressSpace()) {
+					auto& cache = region.cache();
+					auto hit = search(cache->crbegin(), cache->crend());
+
+					if (!hit.has_value())
+						continue;
+
+					pointer = hit.value();
+					return revalidate();
+				} else {
+					std::span<std::byte> b{ reinterpret_cast<std::byte*>(region.getBeginAddress()), reinterpret_cast<std::byte*>(region.getEndAddress())};
+					auto hit = search(b.crbegin(), b.crend());
+
+					if (!hit.has_value())
+						continue;
+
+					pointer = hit.value();
+					return revalidate();
+				}
+			}
+
+			return invalidate();
+		}
+
+		// Next occurrence of signature
+		template <typename DerivedSignature> requires std::is_base_of_v<SignatureScanner::Signature, DerivedSignature>
+		SafePointer& nextSignatureOccurrence(const DerivedSignature& signature, std::optional<bool> executable = std::nullopt)
+		{
+			for (const auto& region : memoryManager->getLayout()) {
+				if (region.getEndAddress() <= pointer)
+					continue;
+
+				if (!region.getFlags().isReadable() || region.isSpecial())
+					continue;
+
+				if (!executable.has_value() || region.getFlags().isExecutable() == executable)
+					continue;
+
+				auto search = [&](auto begin, auto end) {
+					while(begin != reinterpret_cast<std::byte*>(pointer))
+						begin++;
+
+					auto hit = signature.next(begin, end());
+					return hit;
+				};
+
+				if(memoryManager->isRemoteAddressSpace()) {
+					auto& cache = region.cache();
+					auto hit = search(cache->crbegin(), cache->crend());
+
+					if (!hit.has_value())
+						continue;
+
+					pointer = hit.value();
+					return revalidate();
+				} else {
+					std::span<std::byte> b{ reinterpret_cast<std::byte*>(region.getBeginAddress()), reinterpret_cast<std::byte*>(region.getEndAddress())};
+					auto hit = search(b.crbegin(), b.crend());
+
+					if (!hit.has_value())
+						continue;
+
+					pointer = hit.value();
+					return revalidate();
+				}
+			}
+
+			return invalidate();
+		}
+
+		// Tests if the given pattern signature matches the current address
+		template <std::size_t N>
+		bool doesMatch(const SignatureScanner::PatternSignature<N>& signature) const
+		{
+			if (isValid(signature.getElements().size()))
+				return signature.doesMatch(pointer);
+			return false;
+		}
+
+		// Tests if the given signature matches the current address (WARNING: Unsafe as generic signatures don't expose any length)
+		template <typename DerivedSignature> requires std::is_base_of_v<SignatureScanner::Signature, DerivedSignature>
+		bool doesMatch(const DerivedSignature& signature) const
+		{
+			auto region = memoryManager->getLayout().findRegion(pointer);
+			if(!region)
+				return false;
+
+			if(memoryManager->isRemoteAddressSpace()) {
+				auto& cache = region->cache();
+				auto begin = cache->cbegin();
+				while(begin < reinterpret_cast<std::byte*>(pointer))
+					begin++;
+
+				return signature.doesMatch(begin, cache->cend());
+			} else {
+				return signature.doesMatch(reinterpret_cast<std::byte*>(getPointer()), reinterpret_cast<std::byte*>(region->getEndAddress()));
+			}
+		}
+
+		// For addons:
+		template<typename F>
+		SafePointer& invoke(F&& func) requires std::is_invocable_v<F, decltype(*this)> {
+			if constexpr(std::is_same_v<std::invoke_result_t<F>, SafePointer&>)
+				return func(*this);
+			else {
+				func(*this);
+				return *this;
+			}
+		}
 
 		// Filters
-		[[nodiscard]] bool isInModule(const std::string& moduleName) const;
-
-		inline std::strong_ordering operator<=>(const SafePointer& other) const
+		[[nodiscard]] bool isInModule(const std::string& moduleName) const
 		{
+			auto module = memoryManager->getLayout().findRegion(pointer);
+			return module && module->getName()->ends_with(moduleName);
+		}
 
+		constexpr std::strong_ordering operator<=>(const SafePointer& other) const
+		{
 			return pointer <=> other.pointer;
 		}
 
-		inline bool operator==(const SafePointer& other) const
+		constexpr bool operator==(const SafePointer& other) const
 		{
 			return pointer == other.pointer;
 		}
 
-		[[nodiscard]] inline std::uintptr_t getPointer() const
+		[[nodiscard]] constexpr const MemoryManager::MemoryManager* getMemoryManager() const {
+			return memoryManager;
+		}
+
+		[[nodiscard]] constexpr std::uintptr_t getPointer() const
 		{
 			return pointer;
 		};
 	};
 
 	class Session {
+		const MemoryManager::MemoryManager& memoryManager;
 		std::vector<SafePointer> pointers;
 
 		bool safe; // Are we using safety measures?
 
-		inline Session(std::vector<SafePointer>&& pointers, bool safe)
-			: pointers(std::move(pointers))
+		constexpr Session(const MemoryManager::MemoryManager& memoryManager, std::vector<SafePointer>&& pointers, bool safe)
+			: memoryManager(memoryManager)
+			, pointers(std::move(pointers))
 			, safe(safe)
 		{
 		}
 		template <typename Container>
-		inline Session(const Container& pointers, bool safe)
-			: pointers()
+		constexpr Session(const MemoryManager::MemoryManager& memoryManager, const Container& pointers, bool safe)
+			: memoryManager(memoryManager)
+			, pointers()
 			, safe(safe)
 		{
 			this->pointers.reserve(pointers.size());
 			for (auto pointer : pointers) {
-				this->pointers.emplace_back(pointer);
+				this->pointers.emplace_back(&memoryManager, pointer);
 			}
-		}
-		inline Session(std::uintptr_t pointer, bool safe)
-			: pointers({ SafePointer(pointer) })
-			, safe(safe)
-		{
-		}
-		inline explicit Session(bool safe = true)
-			: pointers()
-			, safe(safe)
-		{
 		}
 
 	public:
+		[[nodiscard]] static Session module(const MemoryManager::MemoryManager& memoryManager, const std::string& moduleName)
+		{
+			std::uintptr_t lowest = 0;
+			for (const auto& region : memoryManager.getLayout())
+				if(region.getName().has_value() && region.getName()->ends_with(moduleName))
+					if(lowest == 0 || lowest > region.getBeginAddress())
+						lowest = region.getBeginAddress();
+			if (lowest == 0)
+				return Session{ memoryManager, {}, true };
+			return pointer(memoryManager, reinterpret_cast<void*>(lowest));
+		}
+
+		template<typename DerivedSignature> requires std::is_base_of_v<SignatureScanner::Signature, DerivedSignature>
+		[[nodiscard]] static Session signature(const MemoryManager::MemoryManager& memoryManager, const DerivedSignature& signature, std::optional<bool> executable = std::nullopt) {
+			std::vector<std::byte*> pointers{};
+
+			for (const auto& region : memoryManager.getLayout()) {
+				if (!region.getFlags().isReadable() || region.isSpecial())
+					continue;
+
+				if (executable.has_value() && region.getFlags().isExecutable() != executable)
+					continue;
+
+				if(memoryManager.isRemoteAddressSpace()) {
+					auto& cache = region.cache();
+					signature.all(cache->cbegin(), cache->cend(), detail::LambdaInserter<MemoryManager::CachedRegion::CacheIterator>([&](MemoryManager::CachedRegion::CacheIterator match) {
+						pointers.push_back(&*match);
+					}));
+				} else {
+					signature.all(reinterpret_cast<std::byte*>(region.getBeginAddress()), reinterpret_cast<std::byte*>(region.getEndAddress()), detail::LambdaInserter<std::byte*>([&](std::byte* match) {
+						pointers.push_back(match);
+					}));
+				}
+			}
+
+			return { memoryManager, pointers, true };
+		}
+
+		template<typename Container>
+		[[nodiscard]] static Session pointerList(const MemoryManager::MemoryManager& memoryManager, const Container& pointers) {
+			return Session{ memoryManager, pointers, true };
+		}
+
+		[[nodiscard]] static Session pointer(const MemoryManager::MemoryManager& memoryManager, void* pointer)
+		{
+			return Session{ memoryManager, std::initializer_list<std::uintptr_t>{ reinterpret_cast<std::uintptr_t>(pointer) }, true };
+		}
+
+		[[nodiscard]] static Session pointerArray(const MemoryManager::MemoryManager& memoryManager, void* array, std::size_t index) // e.g. Virtual function tables
+		{
+			return { memoryManager, { SafePointer(&memoryManager, array).dereference().add(index * sizeof(void*)).dereference() }, true };
+		}
+
 		Session() = delete;
 
-		// Openers
-		[[nodiscard]] static Session signature(const std::string& signature, char wildcard = '?', std::optional<bool> code = std::nullopt);
-		[[nodiscard]] static Session module(const std::string& moduleName);
-		[[nodiscard]] static Session string(const std::string& string, std::optional<char> wildcard = std::nullopt);
-		[[nodiscard]] static Session pointerList(const std::vector<void*>& pointers);
-		[[nodiscard]] static Session pointer(void* pointer);
-		[[nodiscard]] static Session pointerArray(void* array, std::size_t index); // e.g. Virtual function tables
-
 		// Manipulation
-		Session& add(std::size_t operand); // Advances all pointers forward
-		Session& sub(std::size_t operand); // Inverse of above
-		Session& dereference(); // Follows a pointer
+		Session& add(std::size_t operand) // Advances all pointers forward
+		{
+			return forEach([operand](SafePointer& safePointer) {
+				safePointer.add(operand);
+			});
+		}
+		Session& sub(std::size_t operand) // Inverse of above
+		{
+			return forEach([operand](SafePointer& safePointer) {
+				safePointer.sub(operand);
+			});
+		}
+		Session& dereference() // Follows a pointer
+		{
+			return forEach([](SafePointer& safePointer) {
+				safePointer.dereference();
+			});
+		}
 
 		// Safety
-		Session& setSafety(bool newSafeness);
-		[[nodiscard]] bool isSafe() const;
-		Session& toggleSafety();
+		Session& setSafety(bool newSafeness)
+		{
+			safe = newSafeness;
+			return *this;
+		}
+		[[nodiscard]] bool isSafe() const { return safe; }
+		Session& toggleSafety()
+		{
+			safe = !safe;
+			return *this;
+		}
 
-		// X86
-#if defined(__x86_64) || defined(i386)
-		Session& relativeToAbsolute(); // Follows down a relative offset
-
-		Session& prevInstruction(); // WARNING: X86 can't be disassembled backwards properly, use with caution
-		Session& nextInstruction(); // Skips the current X86 instruction
-
-		Session& findXREFs(bool relative = true, bool absolute = true); // Since there can be multiple xrefs, this can increase the amount of addresses
-		Session& findXREFs(const std::string& moduleName, bool relative = true, bool absolute = true); // Same as above but limited to a single module
-#endif
 		// Signatures
-		Session& prevByteOccurrence(const std::string& signature, char wildcard = '?', std::optional<bool> code = std::nullopt); // Prev occurrence of signature
-		Session& nextByteOccurrence(const std::string& signature, char wildcard = '?', std::optional<bool> code = std::nullopt); // Next occurrence of signature
+		// Prev occurrence of signature
+		template <typename DerivedSignature> requires std::is_base_of_v<SignatureScanner::Signature, DerivedSignature>
+		Session& prevSignatureOccurrence(const DerivedSignature& signature, std::optional<bool> executable = std::nullopt)
+		{
+			return forEach([&signature, executable](SafePointer& safePointer) {
+				safePointer.prevSignatureOccurrence(signature, executable);
+			});
+		}
 
-		// Strings
-		Session& prevStringOccurrence(const std::string& string, std::optional<char> wildcard = std::nullopt); // Prev occurrence of string
-		Session& nextStringOccurrence(const std::string& string, std::optional<char> wildcard = std::nullopt); // Next occurrence of string
+		// Next occurrence of signature
+		template <typename DerivedSignature> requires std::is_base_of_v<SignatureScanner::Signature, DerivedSignature>
+		Session& nextSignatureOccurrence(const DerivedSignature& signature, std::optional<bool> executable = std::nullopt)
+		{
+			return forEach([&signature, executable](SafePointer& safePointer) {
+				safePointer.nextSignatureOccurrence(signature, executable);
+			});
+		}
 
 		// Filters
-		Session& filterModule(const std::string& moduleName);
+		Session& filterModule(const std::string& moduleName)
+		{
+			return filter([&moduleName](const SafePointer& safePointer) {
+				return safePointer.isInModule(moduleName);
+			});
+		}
 
 		// Advanced Flow
-		Session& purgeInvalid(std::size_t length = 1); // Will purge all pointers, which can't be dereferenced (Useful when using unsafe mode)
-		Session& forEach(const std::function<void(SafePointer&)>& body); // Calls action on each pointer
-		Session& repeater(const std::function<bool(SafePointer&)>& action); // Repeats action until false is returned
-		Session& repeater(std::size_t iterations, const std::function<void(SafePointer&)>& action); // Repeats action `iterations` times
-		Session& filter(const std::function<bool(const SafePointer&)>& predicate); // Filters out non-conforming pointers
-		Session& flatMap(const std::function<std::vector<SafePointer>(const SafePointer&)>& transformer); // Maps pointer to other pointers
+		Session& purgeInvalid(std::size_t length = 1) // Will purge all pointers, which can't be dereferenced (Useful when using unsafe mode)
+		{
+			return forEach([length](SafePointer& safePointer) {
+				if (!safePointer.isValid(length))
+					safePointer.invalidate();
+			});
+		}
+		Session& forEach(const std::function<void(SafePointer&)>& body) // Calls action on each pointer
+		{
+			// This looks a bit scuffed, but I'm pretty sure it is the most memory-efficient way of doing it
+			std::erase_if(pointers, [this, body](SafePointer& safePointer) {
+				body(safePointer);
+				return isSafe() && !safePointer.isValid();
+			});
+			return *this;
+		}
+		Session& repeater(const std::function<bool(SafePointer&)>& action) // Repeats action until false is returned
+		{
+			return forEach([action](SafePointer& safePointer) {
+				while (action(safePointer))
+					;
+			});
+		}
+		Session& repeater(std::size_t iterations, const std::function<void(SafePointer&)>& action) // Repeats action `iterations` times
+		{
+			return forEach([iterations, action](SafePointer& safePointer) {
+				for (std::size_t i = 0; i < iterations; i++)
+					action(safePointer);
+			});
+		}
+		Session& filter(const std::function<bool(const SafePointer&)>& predicate) // Filters out non-conforming pointers
+		{
+			return forEach([predicate](SafePointer& safePointer) {
+				if (!predicate(safePointer))
+					safePointer.invalidate();
+			});
+		}
+		Session& flatMap(const std::function<std::vector<SafePointer>(const SafePointer&)>& transformer) // Maps pointer to other pointers
+		{
+			std::vector<SafePointer> newSafePointers;
+			for (SafePointer& safePointer : pointers) {
+				auto transformed = transformer(safePointer);
+				for(SafePointer& newSafePointer : transformed) {
+					if(isSafe() && !newSafePointer.isValid())
+						continue;
+
+					newSafePointers.emplace_back(newSafePointer);
+				}
+			}
+			pointers = std::move(newSafePointers);
+			return *this;
+		}
 
 		// Finalizing
-		[[nodiscard]] std::size_t size() const; // Returns size of remaining pointers
-		[[nodiscard]] std::vector<void*> getPointers() const; // Returns all remaining pointers
-		[[nodiscard]] std::optional<void*> getPointer() const; // Will return std::nullopt if there are no/multiple pointers available
-		[[nodiscard]] void* expect(const std::string& message) const; // Same as getPointer, but throws a std::runtime_error if not present
+		struct Finalization {
+			std::uintptr_t value; // If `found == true` contains the remaining pointer, if `found == false` contains amount of remaining elements
+			bool found; // If there was only one remaining pointer
+		};
+
+		[[nodiscard]] const std::vector<SafePointer>& peek() const // Allows to peek at all remaining pointers
+		{
+			return pointers;
+		}
+		[[nodiscard]] Finalization finalize() const // Will return a Finalization struct if there are no/multiple pointers available
+		{
+			if (pointers.size() == 1)
+				return { pointers.begin()->getPointer(), true };
+
+			return Finalization{ pointers.size(), false };
+		}
+		[[nodiscard]] std::uintptr_t expect(const std::string& tooFew, const std::string& tooMany) const // Calls finalize, but throws a std::runtime_error if it wasn't found
+		{
+			Session::Finalization optional = finalize();
+
+			if (optional.found)
+				return optional.value;
+
+			throw std::runtime_error(optional.value == 0 ? tooFew : tooMany);
+		}
+		[[nodiscard]] std::uintptr_t expect(const std::string& message) const // Calls expect with tooFew and tooMany both set to message
+		{
+			return expect(message, message);
+		}
 
 		// Automatic casts
 		template <typename T>
-		[[nodiscard]] std::optional<T> getPointer() const {
-			if(auto opt = getPointer(); opt.has_value())
-				return std::optional<T>{ T(opt.value()) };
-			return std::nullopt;
+		[[nodiscard]] T expect(const std::string& tooFew, const std::string& tooMany) const {
+			return T(expect(tooFew, tooMany));
 		}
 		template <typename T>
 		[[nodiscard]] T expect(const std::string& message) const {
