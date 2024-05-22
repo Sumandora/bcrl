@@ -156,34 +156,33 @@ namespace BCRL {
 				if (!region.getFlags().isReadable() || region.isSpecial())
 					continue;
 
-				if (!executable.has_value() || region.getFlags().isExecutable() == executable)
+				if (executable.has_value() && region.getFlags().isExecutable() != executable)
 					continue;
 
 				auto search = [&](auto begin, auto end) {
-					while(begin != reinterpret_cast<std::byte*>(pointer))
+					while(&*begin > reinterpret_cast<std::byte*>(pointer))
 						begin++;
 
-					auto hit = signature.prev(begin, end());
-					return hit;
+					return signature.prev(begin, end);
 				};
 
 				if(memoryManager->isRemoteAddressSpace()) {
 					auto& cache = region.cache();
 					auto hit = search(cache->crbegin(), cache->crend());
 
-					if (!hit.has_value())
+					if (hit == cache->crend())
 						continue;
 
-					pointer = hit.value();
+					pointer = reinterpret_cast<std::uintptr_t>(&*hit);
 					return revalidate();
 				} else {
 					std::span<std::byte> b{ reinterpret_cast<std::byte*>(region.getBeginAddress()), reinterpret_cast<std::byte*>(region.getEndAddress())};
 					auto hit = search(b.crbegin(), b.crend());
 
-					if (!hit.has_value())
+					if (hit == b.crend())
 						continue;
 
-					pointer = hit.value();
+					pointer = reinterpret_cast<std::uintptr_t>(&*hit);
 					return revalidate();
 				}
 			}
@@ -202,34 +201,33 @@ namespace BCRL {
 				if (!region.getFlags().isReadable() || region.isSpecial())
 					continue;
 
-				if (!executable.has_value() || region.getFlags().isExecutable() == executable)
+				if (executable.has_value() && region.getFlags().isExecutable() != executable)
 					continue;
 
 				auto search = [&](auto begin, auto end) {
-					while(begin != reinterpret_cast<std::byte*>(pointer))
+					while(&*begin < reinterpret_cast<std::byte*>(pointer))
 						begin++;
 
-					auto hit = signature.next(begin, end());
-					return hit;
+					return signature.next(begin, end);
 				};
 
 				if(memoryManager->isRemoteAddressSpace()) {
 					auto& cache = region.cache();
-					auto hit = search(cache->crbegin(), cache->crend());
+					auto hit = search(cache->cbegin(), cache->cend());
 
-					if (!hit.has_value())
+					if (hit == cache->cend())
 						continue;
 
-					pointer = hit.value();
+					pointer = reinterpret_cast<std::uintptr_t>(&*hit);
 					return revalidate();
 				} else {
 					std::span<std::byte> b{ reinterpret_cast<std::byte*>(region.getBeginAddress()), reinterpret_cast<std::byte*>(region.getEndAddress())};
-					auto hit = search(b.crbegin(), b.crend());
+					auto hit = search(b.cbegin(), b.cend());
 
-					if (!hit.has_value())
+					if (hit == b.cend())
 						continue;
 
-					pointer = hit.value();
+					pointer = reinterpret_cast<std::uintptr_t>(&*hit);
 					return revalidate();
 				}
 			}
@@ -241,29 +239,10 @@ namespace BCRL {
 		template <std::size_t N>
 		bool doesMatch(const SignatureScanner::PatternSignature<N>& signature) const
 		{
-			if (isValid(signature.getElements().size()))
-				return signature.doesMatch(pointer);
-			return false;
-		}
-
-		// Tests if the given signature matches the current address (WARNING: Unsafe as generic signatures don't expose any length)
-		template <typename DerivedSignature> requires std::is_base_of_v<SignatureScanner::Signature, DerivedSignature>
-		bool doesMatch(const DerivedSignature& signature) const
-		{
-			auto region = memoryManager->getLayout().findRegion(pointer);
-			if(!region)
+			std::byte bytes[signature.getElements().size()];
+			if(!read(bytes, signature.getElements().size()))
 				return false;
-
-			if(memoryManager->isRemoteAddressSpace()) {
-				auto& cache = region->cache();
-				auto begin = cache->cbegin();
-				while(begin < reinterpret_cast<std::byte*>(pointer))
-					begin++;
-
-				return signature.doesMatch(begin, cache->cend());
-			} else {
-				return signature.doesMatch(reinterpret_cast<std::byte*>(getPointer()), reinterpret_cast<std::byte*>(region->getEndAddress()));
-			}
+			return signature.doesMatch(&bytes[0], &bytes[signature.getElements().size()+1]);
 		}
 
 		// For addons:

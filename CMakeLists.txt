@@ -13,7 +13,7 @@ include(FetchContent)
 FetchContent_Declare(SignatureScanner
 	GIT_REPOSITORY https://github.com/Sumandora/SignatureScanner
 	GIT_PROGRESS TRUE
-	GIT_TAG dev)
+	GIT_TAG 2.1)
 FetchContent_MakeAvailable(SignatureScanner)
 add_subdirectory("${SignatureScanner_SOURCE_DIR}/Modules/Pattern")
 target_link_libraries(BCRL INTERFACE SignatureScanner PatternSignature)
@@ -28,7 +28,7 @@ target_link_libraries(BCRL INTERFACE length-disassembler)
 FetchContent_Declare(MemoryManager
 		GIT_REPOSITORY https://github.com/Sumandora/MemoryManager
 		GIT_PROGRESS TRUE
-		GIT_TAG master)
+		GIT_TAG 1.0)
 FetchContent_MakeAvailable(MemoryManager)
 target_link_libraries(BCRL INTERFACE MemoryManager)
 
