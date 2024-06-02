@@ -15,7 +15,7 @@ FetchContent_Declare(SignatureScanner
 	GIT_PROGRESS TRUE
 	GIT_TAG 2.1)
 FetchContent_MakeAvailable(SignatureScanner)
-add_subdirectory("${SignatureScanner_SOURCE_DIR}/Modules/Pattern")
+add_subdirectory("${SignatureScanner_SOURCE_DIR}/Modules/Pattern" "PatternSignatures")
 target_link_libraries(BCRL INTERFACE SignatureScanner PatternSignature)
 
 FetchContent_Declare(LengthDisassembler
