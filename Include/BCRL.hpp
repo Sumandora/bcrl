@@ -246,14 +246,9 @@ namespace BCRL {
 		}
 
 		// For addons:
-		template<typename F>
-		SafePointer& invoke(F&& func) requires std::is_invocable_v<F, decltype(*this)> {
-			if constexpr(std::is_same_v<std::invoke_result_t<F>, SafePointer&>)
-				return func(*this);
-			else {
-				func(*this);
-				return *this;
-			}
+		SafePointer& invoke(const std::function<void(SafePointer&)>& func) {
+			func(*this);
+			return *this;
 		}
 
 		// Filters
