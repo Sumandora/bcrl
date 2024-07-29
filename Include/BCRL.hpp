@@ -791,7 +791,10 @@ namespace BCRL {
 			if (!opt.found)
 				throw std::exception{};
 
-			return T(opt.pointer);
+			if constexpr(std::is_pointer_v<T>)
+				return reinterpret_cast<T>(reinterpret_cast<void*>(opt.pointer));
+			else
+				return T(opt.pointer);
 		}
 
 		// Gets the last remaining pointer, but throws a std::runtime_error with a user-defined message if the pool doesn't contain exactly one pointer
@@ -803,7 +806,10 @@ namespace BCRL {
 			if (!optional.found)
 				throw std::runtime_error{ optional.count == 0 ? tooFew : tooMany };
 
-			return T(optional.pointer);
+			if constexpr(std::is_pointer_v<T>)
+				return reinterpret_cast<T>(reinterpret_cast<void*>(optional.pointer));
+			else
+				return T(optional.pointer);
 		}
 
 		// Same as expect with a uniform exception message
@@ -876,7 +882,7 @@ namespace BCRL {
 		detail::ConvertableToPatternSignature auto&& s,
 		const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
 	{
-		return ::BCRL::signature(memoryManager, SignatureScanner::PatternSignature{ std::forward<std::remove_reference_t<decltype(s)>>(s) }, searchConstraints);
+		return signature(memoryManager, SignatureScanner::PatternSignature{ std::forward<std::remove_reference_t<decltype(s)>>(s) }, searchConstraints);
 	}
 }
 
