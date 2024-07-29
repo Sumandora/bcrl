@@ -597,6 +597,10 @@ namespace BCRL {
 		{
 			return pointer;
 		};
+
+		[[nodiscard]] constexpr SafePointer clone() const {
+			return *this;
+		}
 	};
 
 	template <typename MemMgr>
@@ -757,6 +761,10 @@ namespace BCRL {
 				}
 			}
 			pointers = std::move(newSafePointers);
+			return *this;
+		}
+
+		[[nodiscard]] constexpr Session clone() const {
 			return *this;
 		}
 
