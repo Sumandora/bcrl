@@ -13,7 +13,7 @@ include(FetchContent)
 FetchContent_Declare(SignatureScanner
 	GIT_REPOSITORY https://github.com/Sumandora/SignatureScanner
 	GIT_PROGRESS TRUE
-	GIT_TAG 2.3)
+	GIT_TAG 2.3.1)
 FetchContent_MakeAvailable(SignatureScanner)
 add_subdirectory("${SignatureScanner_SOURCE_DIR}/Modules/Pattern" "PatternSignatures")
 add_subdirectory("${SignatureScanner_SOURCE_DIR}/Modules/XRef" "XRefSignatures")
