@@ -30,7 +30,7 @@ target_link_libraries(BCRL INTERFACE length-disassembler)
 FetchContent_Declare(MemoryManager
 		GIT_REPOSITORY https://github.com/Sumandora/MemoryManager
 		GIT_PROGRESS TRUE
-		GIT_TAG 2.0)
+		GIT_TAG 2.1)
 FetchContent_MakeAvailable(MemoryManager)
 target_link_libraries(BCRL INTERFACE MemoryManager)
 
