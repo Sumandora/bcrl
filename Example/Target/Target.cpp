@@ -4,7 +4,7 @@ extern "C" {
 
 void anotherSecretMethod();
 
-[[gnu::used]] void superSecretMethod()
+void superSecretMethod()
 {
 	puts("You will never find me!");
 	anotherSecretMethod();

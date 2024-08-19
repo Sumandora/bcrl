@@ -103,18 +103,13 @@ namespace BCRL {
 		 * 	r-x specifies a region which is readable and executable, but not writable
 		 * 	r-- specifies a region which is read-only, meaning readable, but not executable/writable
 		 */
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "google-explicit-constructor"
-		constexpr FlagSpecification(const char rwx[3])
+		constexpr FlagSpecification(const char rwx[3]) // NOLINT(google-explicit-constructor, hicpp-explicit-conversions)
 		{
 			parse<'r'>(readable, rwx[0]);
 			parse<'w'>(writable, rwx[1]);
 			parse<'x'>(executable, rwx[2]);
 		}
-#pragma clang diagnostic pop
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wshadow"
 		[[nodiscard]] bool matchesReadable(bool readable) const
 		{
 			return matches(this->readable, readable);
@@ -128,7 +123,6 @@ namespace BCRL {
 		{
 			return matches(this->executable, executable);
 		}
-#pragma clang diagnostic pop
 
 		bool operator==(MemoryManager::Flags flags) const
 		{
@@ -530,10 +524,7 @@ namespace BCRL {
 		}
 
 	private:
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "Simplify"
 		static constexpr bool is64Bit = sizeof(void*) == 8;
-#pragma clang diagnostic pop
 
 	public:
 		SafePointer& relativeToAbsolute()

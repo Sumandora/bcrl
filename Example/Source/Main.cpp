@@ -11,7 +11,7 @@
 int main()
 {
 	void* handle = dlopen("libExampleTarget.so", RTLD_NOW); // Force load
-	link_map* lmap;
+	link_map* lmap = nullptr;
 	dlinfo(handle, RTLD_DI_LINKMAP, &lmap);
 	printf("Loaded at 0x%lx\n", lmap->l_addr);
 
