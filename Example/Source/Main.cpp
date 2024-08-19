@@ -38,7 +38,7 @@ int main()
 					.add(4) // Skip the offset
 					.repeater([](auto& ptr) { ptr.nextInstruction(); return !ptr.template equals<unsigned char>('\xe8'); }) // Find next call instruction
 					.add(5) // This is puts, not anotherSecretMethod
-					.filter([](const auto& ptr) { return ptr.template equals<unsigned char>('\xe8'); }) // Verify that we have another call instruction here
+					.filter([](const auto& ptr) { return ptr.template equals<unsigned char>('\xe8'); }) // Verify that there's another call instruction here
 					.add(1) // Skip the opcode
 					.relativeToAbsolute() // Jump to the target of the relative offset
 					.forEach([](const auto& ptr) { printf("anotherSecretMethod: 0x%lx\n", ptr.getPointer()); })
@@ -56,5 +56,5 @@ int main()
 		localMemoryManager.write(reinterpret_cast<std::uintptr_t>(str), interjection, strlen(interjection) + 1); // Get Stallman'd
 	}
 
-	anotherSecretMethod(); // Invoke 'anotherSecretMethod', but its string has been overwritten, so we get the GNU Linux interjection
+	anotherSecretMethod(); // Invoke 'anotherSecretMethod' without linking against it, but its string has been overwritten, so the GNU Linux interjection appears
 }

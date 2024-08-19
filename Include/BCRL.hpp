@@ -413,8 +413,8 @@ namespace BCRL {
 			if (deref.has_value()) {
 				pointer = deref.value();
 				return revalidate();
-			} else
-				return invalidate();
+			}
+			return invalidate();
 		}
 
 		// Signatures
@@ -431,7 +431,7 @@ namespace BCRL {
 			auto begin = region->cbegin();
 			auto end = region->cend();
 
-			while(end > pointer)
+			while (end > pointer)
 				end--;
 
 			searchConstraints.clampToAddressRange(begin, end);
@@ -468,7 +468,7 @@ namespace BCRL {
 			auto begin = region->cbegin();
 			auto end = region->cend();
 
-			while(begin < pointer)
+			while (begin < pointer)
 				begin++;
 
 			searchConstraints.clampToAddressRange(begin, end);
@@ -598,7 +598,8 @@ namespace BCRL {
 			return pointer;
 		};
 
-		[[nodiscard]] constexpr SafePointer clone() const {
+		[[nodiscard]] constexpr SafePointer clone() const
+		{
 			return *this;
 		}
 	};
@@ -720,7 +721,7 @@ namespace BCRL {
 		// Advanced Flow
 		Session& forEach(const std::function<void(SafePointer&)>& body) // Calls action on each pointer
 		{
-			// This looks a bit scuffed, but I'm pretty sure it is the most memory-efficient way of doing it
+			// This looks a bit scuffed, but it basically acts as a for loop which can also delete invalid entries
 			std::erase_if(pointers, [body](SafePointer& safePointer) {
 				body(safePointer);
 				return !safePointer.isValid();
@@ -764,7 +765,8 @@ namespace BCRL {
 			return *this;
 		}
 
-		[[nodiscard]] constexpr Session clone() const {
+		[[nodiscard]] constexpr Session clone() const
+		{
 			return *this;
 		}
 
@@ -799,7 +801,7 @@ namespace BCRL {
 			if (!opt.found)
 				throw std::exception{};
 
-			if constexpr(std::is_pointer_v<T>)
+			if constexpr (std::is_pointer_v<T>)
 				return reinterpret_cast<T>(reinterpret_cast<void*>(opt.pointer));
 			else
 				return T(opt.pointer);
@@ -814,7 +816,7 @@ namespace BCRL {
 			if (!optional.found)
 				throw std::runtime_error{ optional.count == 0 ? tooFew : tooMany };
 
-			if constexpr(std::is_pointer_v<T>)
+			if constexpr (std::is_pointer_v<T>)
 				return reinterpret_cast<T>(reinterpret_cast<void*>(optional.pointer));
 			else
 				return T(optional.pointer);
