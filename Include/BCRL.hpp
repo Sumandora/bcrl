@@ -805,7 +805,7 @@ namespace BCRL {
 	template <typename MemMgr>
 	[[nodiscard]] inline Session<MemMgr> pointerList(const MemMgr& memoryManager, const std::ranges::range auto& pointers)
 	{
-		return Session{ memoryManager, pointers };
+		return { memoryManager, pointers };
 	}
 
 	template <typename MemMgr>
@@ -817,7 +817,7 @@ namespace BCRL {
 	template <typename MemMgr>
 	[[nodiscard]] inline Session<MemMgr> pointerArray(const MemMgr& memoryManager, std::uintptr_t array, std::size_t index) // e.g. Virtual function tables
 	{
-		return { memoryManager, SafePointer(memoryManager, array).dereference().add(index * sizeof(std::uintptr_t)).dereference() };
+		return { memoryManager, std::vector<SafePointer<MemMgr>>{ SafePointer(memoryManager, array).dereference().add(index * sizeof(std::uintptr_t)).dereference() } };
 	}
 
 	template <typename MemMgr>
