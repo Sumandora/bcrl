@@ -464,7 +464,7 @@ namespace BCRL {
 			auto end = view.cend();
 
 			if (pointer > region->getAddress())
-				std::advance(begin, region->getAddress() - pointer);
+				std::advance(begin, pointer - region->getAddress());
 
 			searchConstraints.clampToAddressRange(*region, view.cbegin(), begin, end);
 
