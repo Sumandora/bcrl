@@ -1,7 +1,24 @@
 #ifndef BCRL_HPP
 #define BCRL_HPP
 
+#include <alloca.h>
+#include <array>
+#include <compare>
+#include <concepts>
+#include <cstddef>
+#include <cstdint>
+#include <expected>
 #include <functional>
+#include <initializer_list>
+#include <iterator>
+#include <limits>
+#include <optional>
+#include <ranges>
+#include <stdexcept>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <variant>
 #include <vector>
 
 #include "ldisasm.h"
@@ -55,11 +72,6 @@ namespace BCRL {
 			else
 				return T(pack...);
 		}
-
-		template <typename ImplicitSignature>
-		concept ConvertableToPatternSignature = !std::derived_from<ImplicitSignature, SignatureScanner::Signature> && requires(ImplicitSignature&& s) {
-			{ SignatureScanner::PatternSignature{ std::forward<ImplicitSignature>(s) } };
-		};
 	}
 
 	struct FlagSpecification {
@@ -86,9 +98,7 @@ namespace BCRL {
 
 		constexpr static bool matches(const std::optional<bool>& op, bool state)
 		{
-			if (op && op != state)
-				return false;
-			return true;
+			return !(op && op != state);
 		}
 
 	public:
@@ -164,7 +174,7 @@ namespace BCRL {
 		{
 		}
 
-		SearchConstraints& withName(std::string name)
+		SearchConstraints& withName(const std::string& name)
 			requires MemoryManager::NameAware<Region>
 		{
 			predicates.push_back([name](const Region& r) {
@@ -174,7 +184,7 @@ namespace BCRL {
 			return *this;
 		}
 
-		SearchConstraints& withPath(std::string path)
+		SearchConstraints& withPath(const std::string& path)
 			requires MemoryManager::PathAware<Region>
 		{
 			predicates.push_back([path](const Region& r) {
@@ -260,7 +270,7 @@ namespace BCRL {
 
 		SearchConstraints& also(MapPredicate<Region>&& predicate)
 		{
-			predicates.push_back(predicate);
+			predicates.emplace_back(std::move(predicate));
 
 			return *this;
 		}
@@ -290,14 +300,16 @@ namespace BCRL {
 			return true;
 		}
 
-		void clampToAddressRange(auto& begin, auto& end) const
+		void clampToAddressRange(const Region& r, const auto& actualBegin, auto& begin, auto& end) const // TODO improve parameters
 			requires MemoryManager::AddressAware<Region> && MemoryManager::LengthAware<Region>
 		{
-			while (begin < addressRange.first)
-				begin++;
+			std::uintptr_t pBegin = r.getAddress() + std::distance(actualBegin, begin);
+			std::uintptr_t pEnd = r.getAddress() + std::distance(actualBegin, end);
+			if (pBegin < addressRange.first)
+				std::advance(begin, addressRange.first - pBegin);
 
-			while (end >= addressRange.second)
-				end--;
+			if (pEnd > addressRange.second)
+				std::advance(end, addressRange.second - pEnd);
 		}
 	};
 
@@ -316,13 +328,13 @@ namespace BCRL {
 	template <typename MemMgr>
 		requires MemoryManager::LayoutAware<MemMgr> && MemoryManager::Reader<MemMgr> && MemoryManager::AddressAware<typename MemMgr::RegionT> && MemoryManager::LengthAware<typename MemMgr::RegionT>
 	class SafePointer { // A pointer which can't cause read access violations
-		mutable MemMgr* memoryManager;
+		const MemMgr* memoryManager;
 		std::uintptr_t pointer;
 		bool invalid; // Set to true, when an operation failed
 
 	public:
 		SafePointer() = delete;
-		inline explicit SafePointer(MemMgr* memoryManager, std::uintptr_t pointer, bool invalid = false)
+		explicit SafePointer(const MemMgr* memoryManager, std::uintptr_t pointer, bool invalid = false)
 			: memoryManager(memoryManager)
 			, pointer(pointer)
 			, invalid(invalid)
@@ -334,22 +346,20 @@ namespace BCRL {
 			if (isMarkedInvalid())
 				return false; // It was already eliminated
 
-			auto* region = memoryManager->getLayout().findRegion(pointer);
-			if (!region)
-				return false;
-			for (std::size_t i = 0; i < length; i++) {
-				std::uintptr_t p = pointer + i;
-				if (p >= region->getAddress() && p < region->getAddress() + region->getLength())
-					continue;
+			std::uintptr_t p = pointer;
+			std::uintptr_t end = pointer + length;
 
-				region = memoryManager->getLayout().findRegion(p);
+			while (end > p) {
+				auto* region = memoryManager->getLayout().findRegion(p);
 				if (!region)
 					return false;
+				p = region->getAddress() + region->getLength();
 			}
+
 			return true;
 		}
 
-		[[nodiscard]] inline bool read(void* to, size_t len) const
+		[[nodiscard]] bool read(void* to, size_t len) const
 		{
 			if (isValid(len)) {
 				memoryManager->read(pointer, to, len);
@@ -360,21 +370,12 @@ namespace BCRL {
 
 		template <typename T>
 			requires std::is_trivially_copyable_v<T>
-		[[nodiscard]] inline std::optional<T> read() const
+		[[nodiscard]] std::optional<T> read() const
 		{
 			T obj;
 			if (read(&obj, sizeof(T)))
 				return obj;
 			return std::nullopt;
-		}
-
-		template <typename T>
-		[[nodiscard]] inline bool equals(T operand) const
-		{
-			std::optional<T> object = read<T>();
-			if (object.has_value())
-				return object.value() == operand;
-			return false;
 		}
 
 		SafePointer& invalidate() // Marks safe pointer as invalid
@@ -389,7 +390,7 @@ namespace BCRL {
 		}
 
 		// Manipulation
-		SafePointer& add(std::integral auto operand) // Advances all pointers forward
+		SafePointer& add(std::integral auto operand) // Advances pointer forward
 		{
 			pointer += operand;
 			return *this;
@@ -411,24 +412,28 @@ namespace BCRL {
 			return invalidate();
 		}
 
-		// Signatures
-		// Prev occurrence of signature
-		SafePointer& prevSignatureOccurrence(
-			const std::derived_from<SignatureScanner::Signature> auto& signature,
+		// Patterns
+		// Prev occurrence of pattern signature
+		SafePointer& prevPatternOccurrence(
+			const SignatureScanner::PatternSignature& signature,
 			const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
-			requires MemoryManager::Iterable<typename MemMgr::RegionT>
+			requires MemoryManager::Viewable<typename MemMgr::RegionT>
 		{
 			auto* region = memoryManager->getLayout().findRegion(pointer);
 			if (!region || !searchConstraints.allowsRegion(*region))
 				return invalidate();
 
-			auto begin = region->cbegin();
-			auto end = region->cend();
+			auto view = region->view();
 
-			while (end > pointer)
-				end--;
+			auto begin = view.cbegin();
+			auto end = view.cend();
 
-			searchConstraints.clampToAddressRange(begin, end);
+			std::uintptr_t pEnd = region->getAddress() + region->getLength();
+
+			if (pointer < pEnd)
+				std::advance(end, pointer - pEnd);
+
+			searchConstraints.clampToAddressRange(region, view.cbegin(), begin, end);
 
 			auto rbegin = std::make_reverse_iterator(end);
 			auto rend = std::make_reverse_iterator(begin);
@@ -438,85 +443,69 @@ namespace BCRL {
 			if (hit == rend)
 				return invalidate();
 
-			pointer = reinterpret_cast<std::uintptr_t>(&*hit);
+			pointer = reinterpret_cast<std::uintptr_t>(hit.base());
 			return revalidate();
 		}
 
-		[[nodiscard]] SafePointer& prevSignatureOccurrence(
-			detail::ConvertableToPatternSignature auto&& s,
-			const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
-		{
-			return prevSignatureOccurrence(SignatureScanner::PatternSignature{ std::forward<std::remove_reference_t<decltype(s)>>(s) }, searchConstraints);
-		}
-
-		// Next occurrence of signature
+		// Next occurrence of pattern signature
 		SafePointer& nextSignatureOccurrence(
-			const std::derived_from<SignatureScanner::Signature> auto& signature,
+			const SignatureScanner::PatternSignature& signature,
 			const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
-			requires MemoryManager::Iterable<typename MemMgr::RegionT>
+			requires MemoryManager::Viewable<typename MemMgr::RegionT>
 		{
 			auto* region = memoryManager->getLayout().findRegion(pointer);
 			if (!region || !searchConstraints.allowsRegion(*region))
 				return invalidate();
 
-			auto begin = region->cbegin();
-			auto end = region->cend();
+			auto view = region->view();
 
-			while (begin < pointer)
-				begin++;
+			auto begin = view.cbegin();
+			auto end = view.cend();
 
-			searchConstraints.clampToAddressRange(begin, end);
+			if (pointer > region->getAddress())
+				std::advance(begin, region->getAddress() - pointer);
+
+			searchConstraints.clampToAddressRange(region, view.cbegin(), begin, end);
 
 			auto hit = signature.next(begin, end);
 
 			if (hit == end)
 				return invalidate();
 
-			pointer = reinterpret_cast<std::uintptr_t>(&*hit);
+			pointer = reinterpret_cast<std::uintptr_t>(hit.base());
 			return revalidate();
-		}
-
-		[[nodiscard]] SafePointer& nextSignatureOccurrence(
-			detail::ConvertableToPatternSignature auto&& s,
-			const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
-		{
-			return nextSignatureOccurrence(SignatureScanner::PatternSignature{ std::forward<std::remove_reference_t<decltype(s)>>(s) }, searchConstraints);
 		}
 
 		// Tests if the given pattern signature matches the current address
 		[[nodiscard]] bool doesMatch(const SignatureScanner::PatternSignature& signature) const
 		{
-			std::byte bytes[signature.getLength()];
+			auto* bytes = static_cast<std::byte*>(alloca(signature.getLength()));
 			if (!read(bytes, signature.getLength()))
 				return false;
 			return signature.doesMatch(&bytes[0], &bytes[signature.getLength()]);
 		}
 
-		[[nodiscard]] bool doesMatch(detail::ConvertableToPatternSignature auto&& signature) const
-		{
-			return doesMatch(SignatureScanner::PatternSignature{ std::forward<std::remove_reference_t<decltype(signature)>>(signature) });
-		}
-
 		// X86
 		// Since there can be multiple xrefs, this returns multiple addresses
-		template <bool Relative, bool Absolute, std::endian Endianness = std::endian::native>
-			requires MemoryManager::Iterable<typename MemMgr::RegionT>
-		[[nodiscard]] std::vector<SafePointer> findXREFs(const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable()) const
+		[[nodiscard]] std::vector<SafePointer> findXREFs(SignatureScanner::XRefTypes types, const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable()) const
+			requires MemoryManager::Viewable<typename MemMgr::RegionT>
 		{
 			std::vector<SafePointer> newPointers;
 
-			SignatureScanner::XRefSignature<Relative, Absolute, Endianness> signature(pointer);
+			SignatureScanner::XRefSignature signature(types, pointer);
 			for (const auto& region : memoryManager->getLayout()) {
 				if (!searchConstraints.allowsRegion(region))
 					continue;
 
-				auto begin = region.cbegin();
-				auto end = region.cend();
+				auto view = region.view();
 
-				searchConstraints.clampToAddressRange(begin, end);
+				auto begin = view.cbegin();
+				auto end = view.cend();
 
-				signature.all(begin, end, detail::LambdaInserter<decltype(begin)>([&newPointers, this](auto match) -> void {
-					newPointers.emplace_back(memoryManager, match);
+				searchConstraints.clampToAddressRange(region, view.cbegin(), begin, end);
+
+				signature.all(begin, end, detail::LambdaInserter<decltype(begin)>([&newPointers, this](auto match) {
+					newPointers.emplace_back(memoryManager, reinterpret_cast<std::uintptr_t>(match.base()));
 				}));
 			}
 
@@ -574,11 +563,14 @@ namespace BCRL {
 			return pointer == other.pointer;
 		}
 
-		[[nodiscard]] constexpr const MemMgr* getMemoryManager() const
+		[[nodiscard]] constexpr const MemMgr& getMemoryManager() const
 		{
 			return memoryManager;
 		}
 
+		/**
+		 * @returns if a previous operation failed
+		 */
 		[[nodiscard]] constexpr bool isMarkedInvalid() const
 		{
 			return invalid;
@@ -595,21 +587,26 @@ namespace BCRL {
 		}
 	};
 
+	enum class FinalizationError : std::uint8_t {
+		NoPointersLeft,
+		TooManyPointersLeft,
+	};
+
 	template <typename MemMgr>
 	class Session {
 		using SafePointer = SafePointer<MemMgr>;
 
-		MemMgr& memoryManager;
+		const MemMgr& memoryManager;
 		std::vector<SafePointer> pointers;
 
 	public:
-		constexpr Session(MemMgr& memoryManager, std::vector<SafePointer>&& pointers)
+		constexpr Session(const MemMgr& memoryManager, std::vector<SafePointer>&& pointers)
 			: memoryManager(memoryManager)
 			, pointers(std::move(pointers))
 		{
 		}
 
-		constexpr Session(MemMgr& memoryManager, const std::ranges::range auto& pointers)
+		constexpr Session(const MemMgr& memoryManager, const std::ranges::range auto& pointers)
 			: memoryManager(memoryManager)
 			, pointers()
 		{
@@ -646,36 +643,22 @@ namespace BCRL {
 		// Signatures
 		// Prev occurrence of signature
 		Session& prevSignatureOccurrence(
-			const std::derived_from<SignatureScanner::Signature> auto& signature,
+			const SignatureScanner::PatternSignature& signature,
 			const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
 		{
-			return forEach([&signature, searchConstraints](SafePointer& safePointer) {
+			return forEach([&signature, &searchConstraints](SafePointer& safePointer) {
 				safePointer.prevSignatureOccurrence(signature, searchConstraints);
 			});
 		}
 
-		[[nodiscard]] Session& prevSignatureOccurrence(
-			detail::ConvertableToPatternSignature auto&& s,
-			const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
-		{
-			return prevSignatureOccurrence(SignatureScanner::PatternSignature{ std::forward<std::remove_reference_t<decltype(s)>>(s) }, searchConstraints);
-		}
-
 		// Next occurrence of signature
 		Session& nextSignatureOccurrence(
-			const std::derived_from<SignatureScanner::Signature> auto& signature,
+			const SignatureScanner::PatternSignature& signature,
 			const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
 		{
-			return forEach([&signature, searchConstraints](SafePointer& safePointer) {
+			return forEach([&signature, &searchConstraints](SafePointer& safePointer) {
 				safePointer.nextSignatureOccurrence(signature, searchConstraints);
 			});
-		}
-
-		[[nodiscard]] Session& nextSignatureOccurrence(
-			detail::ConvertableToPatternSignature auto&& s,
-			const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
-		{
-			return nextSignatureOccurrence(SignatureScanner::PatternSignature{ std::forward<std::remove_reference_t<decltype(s)>>(s) }, searchConstraints);
 		}
 
 		// Filters
@@ -687,11 +670,10 @@ namespace BCRL {
 		}
 
 		// X86
-		template <bool Relative, bool Absolute, std::endian Endianness = std::endian::native>
-		Session& findXREFs(const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
+		Session& findXREFs(SignatureScanner::XRefTypes types, const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
 		{
-			return flatMap([&searchConstraints](const SafePointer& safePointer) {
-				return safePointer.template findXREFs<Relative, Absolute, Endianness>(searchConstraints);
+			return flatMap([types, &searchConstraints](const SafePointer& safePointer) {
+				return safePointer.findXREFs(types, searchConstraints);
 			});
 		}
 
@@ -712,8 +694,8 @@ namespace BCRL {
 		// Advanced Flow
 		Session& forEach(const std::function<void(SafePointer&)>& body) // Calls action on each pointer
 		{
-			// This looks a bit scuffed, but it basically acts as a for loop which can also delete invalid entries
-			std::erase_if(pointers, [body](SafePointer& safePointer) {
+			// This looks a bit weird, but it basically acts as a for loop which can also delete invalid entries
+			std::erase_if(pointers, [&body](SafePointer& safePointer) {
 				body(safePointer);
 				return !safePointer.isValid();
 			});
@@ -721,21 +703,21 @@ namespace BCRL {
 		}
 		Session& repeater(const std::function<bool(SafePointer&)>& action) // Repeats action until false is returned
 		{
-			return forEach([action](SafePointer& safePointer) {
+			return forEach([&action](SafePointer& safePointer) {
 				while (action(safePointer))
 					;
 			});
 		}
 		Session& repeater(std::size_t iterations, const std::function<void(SafePointer&)>& action) // Repeats action `iterations` times
 		{
-			return forEach([iterations, action](SafePointer& safePointer) {
+			return forEach([iterations, &action](SafePointer& safePointer) {
 				for (std::size_t i = 0; i < iterations; i++)
 					action(safePointer);
 			});
 		}
 		Session& filter(const std::function<bool(const SafePointer&)>& predicate) // Filters out non-conforming pointers
 		{
-			return forEach([predicate](SafePointer& safePointer) {
+			return forEach([&predicate](SafePointer& safePointer) {
 				if (!predicate(safePointer))
 					safePointer.invalidate();
 			});
@@ -762,55 +744,48 @@ namespace BCRL {
 		}
 
 		// Finalizing
-		struct Result {
-			union {
-				std::uintptr_t pointer;
-				std::uintptr_t count;
-			};
-			bool found; // true if there was only one remaining pointer
-		};
-
 		[[nodiscard]] const std::vector<SafePointer>& peek() const // Allows to peek at all remaining pointers
 		{
 			return pointers;
 		}
 
-		[[nodiscard]] Result finalize() const // Will return a Result struct if there are no/multiple pointers available
+		[[nodiscard]] std::expected<std::uintptr_t, FinalizationError> finalize() const // Returns a std::expected based on if there is a clear result
 		{
 			if (pointers.size() == 1)
-				return { pointers.begin()->getPointer(), true };
+				return pointers.begin()->getPointer();
 
-			return { pointers.size(), false };
+			if (pointers.empty())
+				return std::unexpected(FinalizationError::NoPointersLeft);
+
+			return std::unexpected(FinalizationError::TooManyPointersLeft);
 		}
 
-		// Gets the last remaining pointer, but throws a std::exception if the pool doesn't contain exactly one pointer
 		template <typename T = std::uintptr_t>
-		[[nodiscard]] T get() const
+		[[nodiscard]] std::expected<T, FinalizationError> finalize() const
 		{
-			Result opt = finalize();
-
-			if (!opt.found)
-				throw std::exception{};
-
-			if constexpr (std::is_pointer_v<T>)
-				return reinterpret_cast<T>(reinterpret_cast<void*>(opt.pointer));
-			else
-				return T(opt.pointer);
+			return finalize().transform([](std::uintptr_t p) {
+				return T(p);
+			});
 		}
 
 		// Gets the last remaining pointer, but throws a std::runtime_error with a user-defined message if the pool doesn't contain exactly one pointer
 		template <typename T = std::uintptr_t>
-		[[nodiscard]] T expect(const std::string& tooFew, const std::string& tooMany) const
+		[[nodiscard]] T expect(const std::string& none, const std::string& tooMany) const
 		{
-			Result optional = finalize();
+			auto result = finalize<T>();
 
-			if (!optional.found)
-				throw std::runtime_error{ optional.count == 0 ? tooFew : tooMany };
+			if (!result.has_value())
+				throw std::runtime_error{ [&none, &tooMany, error = result.error()]() {
+					switch (error) {
+					case FinalizationError::NoPointersLeft:
+						return none;
+					case FinalizationError::TooManyPointersLeft:
+						return tooMany;
+					}
+					std::unreachable();
+				}() };
 
-			if constexpr (std::is_pointer_v<T>)
-				return reinterpret_cast<T>(reinterpret_cast<void*>(optional.pointer));
-			else
-				return T(optional.pointer);
+			return result.value();
 		}
 
 		// Same as expect with a uniform exception message
@@ -823,19 +798,19 @@ namespace BCRL {
 
 	// Openers/Initializers
 	template <typename MemMgr>
-	[[nodiscard]] inline Session<MemMgr> pointerList(MemMgr& memoryManager, const std::ranges::range auto& pointers)
+	[[nodiscard]] inline Session<MemMgr> pointerList(const MemMgr& memoryManager, const std::ranges::range auto& pointers)
 	{
 		return Session{ memoryManager, pointers };
 	}
 
 	template <typename MemMgr>
-	[[nodiscard]] inline Session<MemMgr> pointer(MemMgr& memoryManager, std::uintptr_t pointer)
+	[[nodiscard]] inline Session<MemMgr> pointer(const MemMgr& memoryManager, std::uintptr_t pointer)
 	{
 		return pointerList(memoryManager, std::initializer_list<std::uintptr_t>{ pointer });
 	}
 
 	template <typename MemMgr>
-	[[nodiscard]] inline Session<MemMgr> pointerArray(MemMgr& memoryManager, std::uintptr_t array, std::size_t index) // e.g. Virtual function tables
+	[[nodiscard]] inline Session<MemMgr> pointerArray(const MemMgr& memoryManager, std::uintptr_t array, std::size_t index) // e.g. Virtual function tables
 	{
 		return { memoryManager, SafePointer(&memoryManager, array).dereference().add(index * sizeof(std::uintptr_t)).dereference() };
 	}
@@ -843,7 +818,7 @@ namespace BCRL {
 	template <typename MemMgr>
 		requires MemoryManager::LayoutAware<MemMgr> && MemoryManager::AddressAware<typename MemMgr::RegionT> && MemoryManager::NameAware<typename MemMgr::RegionT> && MemoryManager::FlagAware<typename MemMgr::RegionT>
 	[[nodiscard]] inline Session<MemMgr> regions(
-		MemMgr& memoryManager,
+		const MemMgr& memoryManager,
 		const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
 	{
 		std::vector<std::uintptr_t> bases;
@@ -854,10 +829,10 @@ namespace BCRL {
 	}
 
 	template <typename MemMgr>
-		requires MemoryManager::Iterable<typename MemMgr::RegionT>
+		requires MemoryManager::Viewable<typename MemMgr::RegionT>
 	[[nodiscard]] inline Session<MemMgr> signature(
-		MemMgr& memoryManager,
-		const std::derived_from<SignatureScanner::Signature> auto& signature,
+		const MemMgr& memoryManager,
+		const SignatureScanner::PatternSignature& signature,
 		const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
 	{
 		std::vector<std::uintptr_t> pointers{};
@@ -866,24 +841,19 @@ namespace BCRL {
 			if (!searchConstraints.allowsRegion(region))
 				continue;
 
-			auto begin = region.cbegin();
-			auto end = region.cend();
+			auto view = region.view();
 
-			searchConstraints.clampToAddressRange(begin, end);
+			auto begin = view.cbegin();
+			auto end = view.cend();
 
-			signature.all(begin, end, std::back_inserter(pointers));
+			searchConstraints.clampToAddressRange(region, view.cbegin(), begin, end);
+
+			signature.all(begin, end, detail::LambdaInserter<decltype(begin)>([&pointers](auto p) {
+				pointers.push_back(reinterpret_cast<std::uintptr_t>(p.base()));
+			}));
 		}
 
 		return { memoryManager, pointers };
-	}
-
-	template <typename MemMgr>
-	[[nodiscard]] inline Session<MemMgr> signature(
-		MemMgr& memoryManager,
-		detail::ConvertableToPatternSignature auto&& s,
-		const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
-	{
-		return signature(memoryManager, SignatureScanner::PatternSignature{ std::forward<std::remove_reference_t<decltype(s)>>(s) }, searchConstraints);
 	}
 }
 

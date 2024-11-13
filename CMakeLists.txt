@@ -13,12 +13,9 @@ include(FetchContent)
 FetchContent_Declare(SignatureScanner
 	GIT_REPOSITORY https://github.com/Sumandora/SignatureScanner
 	GIT_PROGRESS TRUE
-	GIT_TAG 2.3.2)
+	GIT_TAG 3.0)
 FetchContent_MakeAvailable(SignatureScanner)
-add_subdirectory("${SignatureScanner_SOURCE_DIR}/Modules/Pattern" "PatternSignatures")
-add_subdirectory("${SignatureScanner_SOURCE_DIR}/Modules/XRef" "XRefSignatures")
-
-target_link_libraries(BCRL INTERFACE SignatureScanner PatternSignature XRefSignature)
+target_link_libraries(BCRL INTERFACE SignatureScanner)
 
 FetchContent_Declare(LengthDisassembler
 	GIT_REPOSITORY https://github.com/Jovvik/length-disassembler
@@ -30,7 +27,7 @@ target_link_libraries(BCRL INTERFACE length-disassembler)
 FetchContent_Declare(MemoryManager
 		GIT_REPOSITORY https://github.com/Sumandora/MemoryManager
 		GIT_PROGRESS TRUE
-		GIT_TAG 2.1.1)
+		GIT_TAG 2.2.1)
 FetchContent_MakeAvailable(MemoryManager)
 target_link_libraries(BCRL INTERFACE MemoryManager)
 
