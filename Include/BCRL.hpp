@@ -334,8 +334,8 @@ namespace BCRL {
 
 	public:
 		SafePointer() = delete;
-		explicit SafePointer(const MemMgr* memoryManager, std::uintptr_t pointer, bool invalid = false)
-			: memoryManager(memoryManager)
+		explicit SafePointer(const MemMgr& memoryManager, std::uintptr_t pointer, bool invalid = false)
+			: memoryManager(&memoryManager)
 			, pointer(pointer)
 			, invalid(invalid)
 		{
@@ -414,7 +414,7 @@ namespace BCRL {
 
 		// Patterns
 		// Prev occurrence of pattern signature
-		SafePointer& prevPatternOccurrence(
+		SafePointer& prevSignatureOccurrence(
 			const SignatureScanner::PatternSignature& signature,
 			const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
 			requires MemoryManager::Viewable<typename MemMgr::RegionT>
@@ -433,7 +433,7 @@ namespace BCRL {
 			if (pointer < pEnd)
 				std::advance(end, pointer - pEnd);
 
-			searchConstraints.clampToAddressRange(region, view.cbegin(), begin, end);
+			searchConstraints.clampToAddressRange(*region, view.cbegin(), begin, end);
 
 			auto rbegin = std::make_reverse_iterator(end);
 			auto rend = std::make_reverse_iterator(begin);
@@ -465,7 +465,7 @@ namespace BCRL {
 			if (pointer > region->getAddress())
 				std::advance(begin, region->getAddress() - pointer);
 
-			searchConstraints.clampToAddressRange(region, view.cbegin(), begin, end);
+			searchConstraints.clampToAddressRange(*region, view.cbegin(), begin, end);
 
 			auto hit = signature.next(begin, end);
 
@@ -505,7 +505,7 @@ namespace BCRL {
 				searchConstraints.clampToAddressRange(region, view.cbegin(), begin, end);
 
 				signature.all(begin, end, detail::LambdaInserter<decltype(begin)>([&newPointers, this](auto match) {
-					newPointers.emplace_back(memoryManager, reinterpret_cast<std::uintptr_t>(match.base()));
+					newPointers.emplace_back(*memoryManager, reinterpret_cast<std::uintptr_t>(match.base()));
 				}));
 			}
 
@@ -612,7 +612,7 @@ namespace BCRL {
 		{
 			this->pointers.reserve(pointers.size());
 			for (auto pointer : pointers) {
-				this->pointers.emplace_back(&memoryManager, pointer);
+				this->pointers.emplace_back(memoryManager, pointer);
 			}
 		}
 
@@ -743,7 +743,8 @@ namespace BCRL {
 			return *this;
 		}
 
-		[[nodiscard]] constexpr const MemMgr& getMemoryManager() const {
+		[[nodiscard]] constexpr const MemMgr& getMemoryManager() const
+		{
 			return *memoryManager;
 		}
 
@@ -816,7 +817,7 @@ namespace BCRL {
 	template <typename MemMgr>
 	[[nodiscard]] inline Session<MemMgr> pointerArray(const MemMgr& memoryManager, std::uintptr_t array, std::size_t index) // e.g. Virtual function tables
 	{
-		return { memoryManager, SafePointer(&memoryManager, array).dereference().add(index * sizeof(std::uintptr_t)).dereference() };
+		return { memoryManager, SafePointer(memoryManager, array).dereference().add(index * sizeof(std::uintptr_t)).dereference() };
 	}
 
 	template <typename MemMgr>
