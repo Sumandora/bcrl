@@ -12,6 +12,7 @@
 #include <initializer_list>
 #include <iterator>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <ranges>
 #include <stdexcept>
@@ -443,7 +444,7 @@ namespace BCRL {
 			if (hit == rend)
 				return invalidate();
 
-			pointer = reinterpret_cast<std::uintptr_t>(hit.base().base()); // Once for reverse iterator and once for the actual iterator
+			pointer = reinterpret_cast<std::uintptr_t>(std::to_address(hit));
 			return revalidate();
 		}
 
@@ -472,7 +473,7 @@ namespace BCRL {
 			if (hit == end)
 				return invalidate();
 
-			pointer = reinterpret_cast<std::uintptr_t>(hit.base());
+			pointer = reinterpret_cast<std::uintptr_t>(std::to_address(hit));
 			return revalidate();
 		}
 
