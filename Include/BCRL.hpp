@@ -443,7 +443,7 @@ namespace BCRL {
 			if (hit == rend)
 				return invalidate();
 
-			pointer = reinterpret_cast<std::uintptr_t>(hit.base());
+			pointer = reinterpret_cast<std::uintptr_t>(hit.base().base()); // Once for reverse iterator and once for the actual iterator
 			return revalidate();
 		}
 
