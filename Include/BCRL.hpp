@@ -594,13 +594,13 @@ namespace BCRL {
 
 	template <typename MemMgr>
 	class Session {
-		using SafePointer = SafePointer<MemMgr>;
+		using InnerSafePointer = SafePointer<MemMgr>;
 
 		const MemMgr* memoryManager;
-		std::vector<SafePointer> pointers;
+		std::vector<InnerSafePointer> pointers;
 
 	public:
-		constexpr Session(const MemMgr& memoryManager, std::vector<SafePointer>&& pointers)
+		constexpr Session(const MemMgr& memoryManager, std::vector<InnerSafePointer>&& pointers)
 			: memoryManager(&memoryManager)
 			, pointers(std::move(pointers))
 		{
@@ -621,21 +621,21 @@ namespace BCRL {
 		// Manipulation
 		Session& add(std::integral auto operand) // Advances all pointers forward
 		{
-			return forEach([operand](SafePointer& safePointer) {
+			return forEach([operand](InnerSafePointer& safePointer) {
 				safePointer.add(operand);
 			});
 		}
 
 		Session& sub(std::integral auto operand) // Inverse of above
 		{
-			return forEach([operand](SafePointer& safePointer) {
+			return forEach([operand](InnerSafePointer& safePointer) {
 				safePointer.sub(operand);
 			});
 		}
 
 		Session& dereference() // Follows a pointer
 		{
-			return forEach([](SafePointer& safePointer) {
+			return forEach([](InnerSafePointer& safePointer) {
 				safePointer.dereference();
 			});
 		}
@@ -646,7 +646,7 @@ namespace BCRL {
 			const SignatureScanner::PatternSignature& signature,
 			const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
 		{
-			return forEach([&signature, &searchConstraints](SafePointer& safePointer) {
+			return forEach([&signature, &searchConstraints](InnerSafePointer& safePointer) {
 				safePointer.prevSignatureOccurrence(signature, searchConstraints);
 			});
 		}
@@ -656,7 +656,7 @@ namespace BCRL {
 			const SignatureScanner::PatternSignature& signature,
 			const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
 		{
-			return forEach([&signature, &searchConstraints](SafePointer& safePointer) {
+			return forEach([&signature, &searchConstraints](InnerSafePointer& safePointer) {
 				safePointer.nextSignatureOccurrence(signature, searchConstraints);
 			});
 		}
@@ -664,7 +664,7 @@ namespace BCRL {
 		// Filters
 		Session& filter(const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
 		{
-			return filter([&searchConstraints](const SafePointer& safePointer) {
+			return filter([&searchConstraints](const InnerSafePointer& safePointer) {
 				return safePointer.filter(searchConstraints);
 			});
 		}
@@ -672,62 +672,62 @@ namespace BCRL {
 		// X86
 		Session& findXREFs(SignatureScanner::XRefTypes types, const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
 		{
-			return flatMap([types, &searchConstraints](const SafePointer& safePointer) {
+			return flatMap([types, &searchConstraints](const InnerSafePointer& safePointer) {
 				return safePointer.findXREFs(types, searchConstraints);
 			});
 		}
 
 		Session& relativeToAbsolute()
 		{
-			return forEach([](SafePointer& safePointer) {
+			return forEach([](InnerSafePointer& safePointer) {
 				safePointer.relativeToAbsolute();
 			});
 		}
 
 		Session& nextInstruction()
 		{
-			return forEach([](SafePointer& safePointer) {
+			return forEach([](InnerSafePointer& safePointer) {
 				safePointer.nextInstruction();
 			});
 		}
 
 		// Advanced Flow
-		Session& forEach(const std::function<void(SafePointer&)>& body) // Calls action on each pointer
+		Session& forEach(const std::function<void(InnerSafePointer&)>& body) // Calls action on each pointer
 		{
 			// This looks a bit weird, but it basically acts as a for loop which can also delete invalid entries
-			std::erase_if(pointers, [&body](SafePointer& safePointer) {
+			std::erase_if(pointers, [&body](InnerSafePointer& safePointer) {
 				body(safePointer);
 				return !safePointer.isValid();
 			});
 			return *this;
 		}
-		Session& repeater(const std::function<bool(SafePointer&)>& action) // Repeats action until false is returned
+		Session& repeater(const std::function<bool(InnerSafePointer&)>& action) // Repeats action until false is returned
 		{
-			return forEach([&action](SafePointer& safePointer) {
+			return forEach([&action](InnerSafePointer& safePointer) {
 				while (action(safePointer))
 					;
 			});
 		}
-		Session& repeater(std::size_t iterations, const std::function<void(SafePointer&)>& action) // Repeats action `iterations` times
+		Session& repeater(std::size_t iterations, const std::function<void(InnerSafePointer&)>& action) // Repeats action `iterations` times
 		{
-			return forEach([iterations, &action](SafePointer& safePointer) {
+			return forEach([iterations, &action](InnerSafePointer& safePointer) {
 				for (std::size_t i = 0; i < iterations; i++)
 					action(safePointer);
 			});
 		}
-		Session& filter(const std::function<bool(const SafePointer&)>& predicate) // Filters out non-conforming pointers
+		Session& filter(const std::function<bool(const InnerSafePointer&)>& predicate) // Filters out non-conforming pointers
 		{
-			return forEach([&predicate](SafePointer& safePointer) {
+			return forEach([&predicate](InnerSafePointer& safePointer) {
 				if (!predicate(safePointer))
 					safePointer.invalidate();
 			});
 		}
-		Session& flatMap(const std::function<std::vector<SafePointer>(const SafePointer&)>& transformer) // Maps pointer to other pointers
+		Session& flatMap(const std::function<std::vector<InnerSafePointer>(const InnerSafePointer&)>& transformer) // Maps pointer to other pointers
 		{
-			std::vector<SafePointer> newSafePointers;
-			for (SafePointer& safePointer : pointers) {
+			std::vector<InnerSafePointer> newSafePointers;
+			for (InnerSafePointer& safePointer : pointers) {
 				auto transformed = transformer(safePointer);
-				for (SafePointer& newSafePointer : transformed) {
+				for (InnerSafePointer& newSafePointer : transformed) {
 					if (!newSafePointer.isValid())
 						continue;
 
@@ -749,7 +749,7 @@ namespace BCRL {
 		}
 
 		// Finalizing
-		[[nodiscard]] const std::vector<SafePointer>& peek() const // Allows to peek at all remaining pointers
+		[[nodiscard]] const std::vector<InnerSafePointer>& peek() const // Allows to peek at all remaining pointers
 		{
 			return pointers;
 		}
