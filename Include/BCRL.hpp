@@ -565,7 +565,7 @@ namespace BCRL {
 
 		[[nodiscard]] constexpr const MemMgr& getMemoryManager() const
 		{
-			return memoryManager;
+			return *memoryManager;
 		}
 
 		/**
@@ -596,18 +596,18 @@ namespace BCRL {
 	class Session {
 		using SafePointer = SafePointer<MemMgr>;
 
-		const MemMgr& memoryManager;
+		const MemMgr* memoryManager;
 		std::vector<SafePointer> pointers;
 
 	public:
 		constexpr Session(const MemMgr& memoryManager, std::vector<SafePointer>&& pointers)
-			: memoryManager(memoryManager)
+			: memoryManager(&memoryManager)
 			, pointers(std::move(pointers))
 		{
 		}
 
 		constexpr Session(const MemMgr& memoryManager, const std::ranges::range auto& pointers)
-			: memoryManager(memoryManager)
+			: memoryManager(&memoryManager)
 			, pointers()
 		{
 			this->pointers.reserve(pointers.size());
@@ -741,6 +741,10 @@ namespace BCRL {
 		[[nodiscard]] constexpr Session clone() const
 		{
 			return *this;
+		}
+
+		[[nodiscard]] constexpr const MemMgr& getMemoryManager() const {
+			return *memoryManager;
 		}
 
 		// Finalizing
