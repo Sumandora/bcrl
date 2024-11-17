@@ -10,25 +10,34 @@ target_compile_features(BCRL INTERFACE cxx_std_23)
 
 include(FetchContent)
 
-FetchContent_Declare(SignatureScanner
-	GIT_REPOSITORY https://github.com/Sumandora/SignatureScanner
-	GIT_PROGRESS TRUE
-	GIT_TAG 3.0)
-FetchContent_MakeAvailable(SignatureScanner)
+if(NOT TARGET SignatureScanner)
+	FetchContent_Declare(
+		SignatureScanner
+		GIT_REPOSITORY https://github.com/Sumandora/SignatureScanner
+		GIT_PROGRESS TRUE
+		GIT_TAG 3.1)
+	FetchContent_MakeAvailable(SignatureScanner)
+endif()
 target_link_libraries(BCRL INTERFACE SignatureScanner)
 
-FetchContent_Declare(LengthDisassembler
-	GIT_REPOSITORY https://github.com/Jovvik/length-disassembler
-	GIT_PROGRESS TRUE
-	GIT_TAG 88fd89c)
-FetchContent_MakeAvailable(LengthDisassembler)
+if(NOT TARGET length-disassembler)
+	FetchContent_Declare(
+		LengthDisassembler
+		GIT_REPOSITORY https://github.com/Jovvik/length-disassembler
+		GIT_PROGRESS TRUE
+		GIT_TAG 88fd89c)
+	FetchContent_MakeAvailable(LengthDisassembler)
+endif()
 target_link_libraries(BCRL INTERFACE length-disassembler)
 
-FetchContent_Declare(MemoryManager
+if(NOT TARGET MemoryManager)
+	FetchContent_Declare(
+		MemoryManager
 		GIT_REPOSITORY https://github.com/Sumandora/MemoryManager
 		GIT_PROGRESS TRUE
-		GIT_TAG 2.2.1)
-FetchContent_MakeAvailable(MemoryManager)
+		GIT_TAG 2.2.3)
+	FetchContent_MakeAvailable(MemoryManager)
+endif()
 target_link_libraries(BCRL INTERFACE MemoryManager)
 
 if(PROJECT_IS_TOP_LEVEL)
