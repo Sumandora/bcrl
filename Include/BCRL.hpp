@@ -1,6 +1,11 @@
 #ifndef BCRL_HPP
 #define BCRL_HPP
 
+#include "ldisasm.h"
+#include "MemoryManager/MemoryManager.hpp"
+#include "SignatureScanner/PatternSignature.hpp"
+#include "SignatureScanner/XRefSignature.hpp"
+
 #include <alloca.h>
 #include <array>
 #include <compare>
@@ -21,11 +26,6 @@
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include "ldisasm.h"
-#include "MemoryManager/MemoryManager.hpp"
-#include "SignatureScanner/PatternSignature.hpp"
-#include "SignatureScanner/XRefSignature.hpp"
 
 namespace BCRL {
 	namespace detail {
