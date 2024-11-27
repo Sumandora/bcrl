@@ -1,4 +1,4 @@
-#include "BCRL.hpp"
+#include "BCRL/BCRL.hpp"
 
 #include "MemoryManager/LinuxMemoryManager.hpp"
 #include "SignatureScanner/PatternSignature.hpp"
