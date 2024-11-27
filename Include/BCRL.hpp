@@ -29,20 +29,21 @@
 
 namespace BCRL {
 	namespace detail {
-		template <typename T>
-		struct LambdaInserter {
+		template <typename F>
+		class LambdaInserter {
+			F callback;
+
+		public:
 			using difference_type = std::ptrdiff_t;
 
-			std::function<void(T)> callback;
-
-			constexpr explicit LambdaInserter(std::function<void(T)> callback)
+			constexpr explicit LambdaInserter(F&& callback)
 				: callback(std::move(callback))
 			{
 			}
 
-			constexpr LambdaInserter& operator=(const T& obj)
+			constexpr LambdaInserter& operator=(auto&& element)
 			{
-				callback(obj);
+				callback(element);
 				return *this;
 			}
 
@@ -505,7 +506,7 @@ namespace BCRL {
 
 				searchConstraints.clampToAddressRange(region, view.cbegin(), begin, end);
 
-				signature.all(begin, end, detail::LambdaInserter<decltype(begin)>([&newPointers, this](auto match) {
+				signature.all(begin, end, detail::LambdaInserter([&newPointers, this](decltype(begin) match) {
 					newPointers.emplace_back(*memoryManager, reinterpret_cast<std::uintptr_t>(match.base()));
 				}));
 			}
@@ -854,7 +855,7 @@ namespace BCRL {
 
 			searchConstraints.clampToAddressRange(region, view.cbegin(), begin, end);
 
-			signature.all(begin, end, detail::LambdaInserter<decltype(begin)>([&pointers](auto p) {
+			signature.all(begin, end, detail::LambdaInserter([&pointers](decltype(begin) p) {
 				pointers.push_back(reinterpret_cast<std::uintptr_t>(p.base()));
 			}));
 		}
