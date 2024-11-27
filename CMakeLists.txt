@@ -15,7 +15,7 @@ if(NOT TARGET SignatureScanner)
 		SignatureScanner
 		GIT_REPOSITORY https://github.com/Sumandora/SignatureScanner
 		GIT_PROGRESS TRUE
-		GIT_TAG 3.1)
+		GIT_TAG 3.1.1)
 	FetchContent_MakeAvailable(SignatureScanner)
 endif()
 target_link_libraries(BCRL INTERFACE SignatureScanner)
