@@ -694,7 +694,8 @@ namespace BCRL {
 		}
 
 		// Advanced Flow
-		Session& forEach(const std::function<void(InnerSafePointer&)>& body) // Calls action on each pointer
+		template<typename F> requires std::invocable<F, InnerSafePointer&>
+		Session& forEach(const F& body) // Calls action on each pointer
 		{
 			// This looks a bit weird, but it basically acts as a for loop which can also delete invalid entries
 			std::erase_if(pointers, [&body](InnerSafePointer& safePointer) {
@@ -703,28 +704,32 @@ namespace BCRL {
 			});
 			return *this;
 		}
-		Session& repeater(const std::function<bool(InnerSafePointer&)>& action) // Repeats action until false is returned
+		template<typename F> requires std::is_invocable_r_v<bool, F, InnerSafePointer&>
+		Session& repeater(const F& action) // Repeats action until false is returned
 		{
 			return forEach([&action](InnerSafePointer& safePointer) {
 				while (action(safePointer))
 					;
 			});
 		}
-		Session& repeater(std::size_t iterations, const std::function<void(InnerSafePointer&)>& action) // Repeats action `iterations` times
+		template<typename F> requires std::invocable<F, InnerSafePointer&>
+		Session& repeater(std::size_t iterations, const F& action) // Repeats action `iterations` times
 		{
 			return forEach([iterations, &action](InnerSafePointer& safePointer) {
 				for (std::size_t i = 0; i < iterations; i++)
 					action(safePointer);
 			});
 		}
-		Session& filter(const std::function<bool(const InnerSafePointer&)>& predicate) // Filters out non-conforming pointers
+		template<typename F> requires std::is_invocable_r_v<bool, F, const InnerSafePointer&>
+		Session& filter(const F& predicate) // Filters out non-conforming pointers
 		{
 			return forEach([&predicate](InnerSafePointer& safePointer) {
 				if (!predicate(safePointer))
 					safePointer.invalidate();
 			});
 		}
-		Session& flatMap(const std::function<std::vector<InnerSafePointer>(const InnerSafePointer&)>& transformer) // Maps pointer to other pointers
+		template<typename F> requires std::is_invocable_r_v<std::vector<InnerSafePointer>, F, const InnerSafePointer&>
+		Session& flatMap(const F& transformer) // Maps pointer to other pointers
 		{
 			std::vector<InnerSafePointer> newSafePointers;
 			for (InnerSafePointer& safePointer : pointers) {
