@@ -35,7 +35,7 @@ if(NOT TARGET MemoryManager)
 		MemoryManager
 		GIT_REPOSITORY https://github.com/Sumandora/MemoryManager
 		GIT_PROGRESS TRUE
-		GIT_TAG 2.2.3)
+		GIT_TAG 2.3)
 	FetchContent_MakeAvailable(MemoryManager)
 endif()
 target_link_libraries(BCRL INTERFACE MemoryManager)
