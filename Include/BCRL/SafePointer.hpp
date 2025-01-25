@@ -51,6 +51,9 @@ namespace BCRL {
 				auto* region = memoryManager->getLayout().findRegion(p);
 				if (!region)
 					return false;
+				if constexpr (MemMgr::RequiresPermissionsForReading)
+					if (!region->getFlags().isReadable())
+						return false;
 				p = region->getAddress() + region->getLength();
 			}
 
