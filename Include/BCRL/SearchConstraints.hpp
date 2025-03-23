@@ -220,7 +220,7 @@ namespace BCRL {
 	template <typename MemMgr>
 	static SearchConstraints<typename MemMgr::RegionT> everything([[maybe_unused]] const MemMgr& _) // Deduction helper
 	{
-		return SearchConstraints<typename MemMgr::RegionT>{};
+		return everything<MemMgr>();
 	}
 }
 	
