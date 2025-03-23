@@ -149,7 +149,7 @@ namespace BCRL {
 		SearchConstraints& thatsShared()
 			requires MemoryManager::SharedAware<Region>
 		{
-			flags.shared = true;
+			shared = true;
 
 			return *this;
 		}
@@ -157,7 +157,7 @@ namespace BCRL {
 		SearchConstraints& thatsPrivate()
 			requires MemoryManager::SharedAware<Region>
 		{
-			flags.shared = false;
+			shared = false;
 
 			return *this;
 		}
