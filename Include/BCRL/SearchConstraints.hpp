@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -29,6 +30,7 @@ namespace BCRL {
 			std::pair<std::uintptr_t, std::uintptr_t>>
 			addressRange;
 		[[no_unique_address]] detail::ConditionalField<MemoryManager::FlagAware<Region>, FlagSpecification> flags;
+		[[no_unique_address]] detail::ConditionalField<MemoryManager::SharedAware<Region>, std::optional<bool>> shared;
 
 	public:
 		SearchConstraints()
@@ -36,6 +38,7 @@ namespace BCRL {
 			, addressRange(detail::conditionalInit<decltype(addressRange)>(
 				  std::numeric_limits<std::uintptr_t>::min(), std::numeric_limits<std::uintptr_t>::max()))
 			, flags(detail::conditionalInit<decltype(flags)>("***"))
+			, shared(detail::conditionalInit<decltype(shared)>(std::nullopt))
 		{
 		}
 
@@ -143,6 +146,22 @@ namespace BCRL {
 			return *this;
 		}
 
+		SearchConstraints& thatsShared()
+			requires MemoryManager::SharedAware<Region>
+		{
+			flags.shared = true;
+
+			return *this;
+		}
+
+		SearchConstraints& thatsPrivate()
+			requires MemoryManager::SharedAware<Region>
+		{
+			flags.shared = false;
+
+			return *this;
+		}
+
 		SearchConstraints& also(MapPredicate<Region>&& predicate)
 		{
 			predicates.emplace_back(std::move(predicate));
@@ -170,6 +189,10 @@ namespace BCRL {
 
 			if constexpr (MemoryManager::FlagAware<Region>)
 				if (region.getFlags() != flags)
+					return false;
+
+			if constexpr (MemoryManager::SharedAware<Region>)
+				if (shared.has_value() && region.isShared() != shared.value())
 					return false;
 
 			return true;
