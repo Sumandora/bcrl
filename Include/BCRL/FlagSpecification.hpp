@@ -30,7 +30,7 @@ namespace BCRL {
 
 		constexpr static bool matches(const std::optional<bool>& op, bool state)
 		{
-			return !(op && op != state);
+			return !op.has_value() || op.value() == state;
 		}
 
 	public:
