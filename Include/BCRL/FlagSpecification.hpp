@@ -4,6 +4,7 @@
 #include "MemoryManager/MemoryManager.hpp"
 
 #include <optional>
+#include <utility>
 
 namespace BCRL {
 	struct FlagSpecification {
@@ -13,18 +14,17 @@ namespace BCRL {
 
 	private:
 		template <char Default>
-		constexpr static void parse(std::optional<bool>& op, char c)
+		constexpr static std::optional<bool> parse(char c)
 		{
 			switch (c) {
 			case '-':
-				op = false;
-				break;
+				return false;
 			case Default:
-				op = true;
-				break;
+				return true;
+			case '*':
+				return std::nullopt;
 			default:
-				op = std::nullopt;
-				break;
+				std::unreachable();
 			}
 		}
 
@@ -35,10 +35,11 @@ namespace BCRL {
 
 	public:
 		/**
-		 * While this constructor accepts any unknown char as nullopt, the convention is to use an asterisk
-		 * Please respect that as it may change in future versions
-		 *
-		 * Example:
+		 * 'r/w/x'	-> Enabled
+		 * '-'		-> Disabled
+		 * '*'		-> Ignored
+		 * 
+		 * Examples:
 		 * 	r*x specifies a region which is readable and executable, but may or may not be writable
 		 * 	rwx specifies a region which is readable, writable and executable
 		 * 	**x specifies a region which is definitely executable, but the rest is ignored
@@ -46,10 +47,10 @@ namespace BCRL {
 		 * 	r-- specifies a region which is read-only, meaning readable, but not executable/writable
 		 */
 		constexpr FlagSpecification(const char rwx[3]) // NOLINT(google-explicit-constructor, hicpp-explicit-conversions)
+			: readable(parse<'r'>(rwx[0]))
+			, writable(parse<'w'>(rwx[1]))
+			, executable(parse<'x'>(rwx[2]))
 		{
-			parse<'r'>(readable, rwx[0]);
-			parse<'w'>(writable, rwx[1]);
-			parse<'x'>(executable, rwx[2]);
 		}
 
 		[[nodiscard]] bool matchesReadable(bool readable) const
