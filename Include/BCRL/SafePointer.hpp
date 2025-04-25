@@ -10,14 +10,16 @@
 #include "SignatureScanner/PatternSignature.hpp"
 #include "SignatureScanner/XRefSignature.hpp"
 
-#include "ldisasm.h"
+#include "LengthDisassembler/LengthDisassembler.hpp"
 
+#include <algorithm>
 #include <alloca.h>
 #include <array>
 #include <compare>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <expected>
 #include <optional>
 #include <type_traits>
 #include <vector>
@@ -230,18 +232,33 @@ namespace BCRL {
 		}
 		SafePointer& nextInstruction()
 		{
+			auto* region = memoryManager->getLayout().findRegion(pointer);
+			if (!region)
+				return invalidate();
+
+			std::uintptr_t end = region->getAddress() + region->getLength();
+
 			static constexpr std::size_t longestX86Insn = 15;
 
-			if (!isValid(longestX86Insn)) {
-				return invalidate();
-			}
+			std::size_t length = std::min(end - pointer, longestX86Insn);
 
 			std::array<std::byte, longestX86Insn> bytes{};
-			if (!read(&bytes, longestX86Insn)) {
+			if (!read(&bytes, length)) {
 				return invalidate();
 			}
 
-			return add(ldisasm(bytes.data(), is64Bit));
+			using enum LengthDisassembler::MachineMode;
+
+			std::expected<LengthDisassembler::Instruction, LengthDisassembler::Error>
+				instruction = LengthDisassembler::disassemble(bytes.data(),
+					is64Bit ? LONG_MODE : LONG_COMPATIBILITY_MODE,
+					length);
+
+			if (!instruction.has_value()) {
+				return invalidate();
+			}
+
+			return add(instruction.value().length);
 		}
 
 		// Filters
