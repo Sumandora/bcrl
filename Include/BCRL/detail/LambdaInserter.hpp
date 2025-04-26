@@ -10,6 +10,7 @@ namespace BCRL::detail {
 		F callback;
 
 	public:
+		// NOLINTNEXTLINE(readability-identifier-naming)
 		using difference_type = std::ptrdiff_t;
 
 		constexpr explicit LambdaInserter(F&& callback)

@@ -26,35 +26,35 @@ namespace BCRL {
 	template <typename MemMgr>
 		requires MemoryManager::LayoutAware<MemMgr> && MemoryManager::Reader<MemMgr> && MemoryManager::AddressAware<typename MemMgr::RegionT> && MemoryManager::LengthAware<typename MemMgr::RegionT>
 	class SafePointer { // A pointer which can't cause read access violations
-		const MemMgr* memoryManager;
+		const MemMgr* memory_manager;
 		std::uintptr_t pointer;
 		bool invalid; // Set to true, when an operation failed
 
 	public:
 		SafePointer() = delete;
-		explicit SafePointer(const MemMgr& memoryManager, std::uintptr_t pointer, bool invalid = false)
-			: memoryManager(&memoryManager)
+		explicit SafePointer(const MemMgr& memory_manager, std::uintptr_t pointer, bool invalid = false)
+			: memory_manager(&memory_manager)
 			, pointer(pointer)
 			, invalid(invalid)
 		{
 		}
 
-		[[nodiscard]] bool isValid(std::size_t length = 1) const
+		[[nodiscard]] bool is_valid(std::size_t length = 1) const
 		{
-			if (isMarkedInvalid())
+			if (is_marked_invalid())
 				return false; // It was already eliminated
 
 			std::uintptr_t p = pointer;
 			std::uintptr_t end = pointer + length;
 
 			while (end > p) {
-				auto* region = memoryManager->getLayout().findRegion(p);
+				auto* region = memory_manager->get_layout().find_region(p);
 				if (!region)
 					return false;
-				if constexpr (MemMgr::RequiresPermissionsForReading)
-					if (!region->getFlags().isReadable())
+				if constexpr (MemMgr::REQUIRES_PERMISSIONS_FOR_READING)
+					if (!region->get_flags().is_readable())
 						return false;
-				p = region->getAddress() + region->getLength();
+				p = region->get_address() + region->get_length();
 			}
 
 			return true;
@@ -62,8 +62,8 @@ namespace BCRL {
 
 		[[nodiscard]] bool read(void* to, size_t len) const
 		{
-			if (isValid(len)) {
-				memoryManager->read(pointer, to, len);
+			if (is_valid(len)) {
+				memory_manager->read(pointer, to, len);
 				return true;
 			}
 			return false;
@@ -115,13 +115,13 @@ namespace BCRL {
 
 		// Patterns
 		// Prev occurrence of pattern signature
-		SafePointer& prevSignatureOccurrence(
+		SafePointer& prev_signature_occurrence(
 			const SignatureScanner::PatternSignature& signature,
-			const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
+			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
 			requires MemoryManager::Viewable<typename MemMgr::RegionT>
 		{
-			auto* region = memoryManager->getLayout().findRegion(pointer);
-			if (!region || !searchConstraints.allowsRegion(*region))
+			auto* region = memory_manager->get_layout().find_region(pointer);
+			if (!region || !search_constraints.allows_region(*region))
 				return invalidate();
 
 			auto view = region->view();
@@ -129,12 +129,12 @@ namespace BCRL {
 			auto begin = view.cbegin();
 			auto end = view.cend();
 
-			std::uintptr_t pEnd = region->getAddress() + region->getLength();
+			std::uintptr_t pointer_end = region->get_address() + region->get_length();
 
-			if (pointer < pEnd)
-				std::advance(end, pointer - pEnd);
+			if (pointer < pointer_end)
+				std::advance(end, pointer - pointer_end);
 
-			searchConstraints.clampToAddressRange(*region, view.cbegin(), begin, end);
+			search_constraints.clamp_to_address_range(*region, view.cbegin(), begin, end);
 
 			auto rbegin = std::make_reverse_iterator(end);
 			auto rend = std::make_reverse_iterator(begin);
@@ -149,13 +149,13 @@ namespace BCRL {
 		}
 
 		// Next occurrence of pattern signature
-		SafePointer& nextSignatureOccurrence(
+		SafePointer& next_signature_occurrence(
 			const SignatureScanner::PatternSignature& signature,
-			const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
+			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
 			requires MemoryManager::Viewable<typename MemMgr::RegionT>
 		{
-			auto* region = memoryManager->getLayout().findRegion(pointer);
-			if (!region || !searchConstraints.allowsRegion(*region))
+			auto* region = memory_manager->get_layout().find_region(pointer);
+			if (!region || !search_constraints.allows_region(*region))
 				return invalidate();
 
 			auto view = region->view();
@@ -163,10 +163,10 @@ namespace BCRL {
 			auto begin = view.cbegin();
 			auto end = view.cend();
 
-			if (pointer > region->getAddress())
-				std::advance(begin, pointer - region->getAddress());
+			if (pointer > region->get_address())
+				std::advance(begin, pointer - region->get_address());
 
-			searchConstraints.clampToAddressRange(*region, view.cbegin(), begin, end);
+			search_constraints.clamp_to_address_range(*region, view.cbegin(), begin, end);
 
 			auto hit = signature.next(begin, end);
 
@@ -178,24 +178,25 @@ namespace BCRL {
 		}
 
 		// Tests if the given pattern signature matches the current address
-		[[nodiscard]] bool doesMatch(const SignatureScanner::PatternSignature& signature) const
+		[[nodiscard]] bool does_match(const SignatureScanner::PatternSignature& signature) const
 		{
-			auto* bytes = static_cast<std::byte*>(alloca(signature.getLength()));
-			if (!read(bytes, signature.getLength()))
+			std::size_t length = signature.get_elements().size();
+			auto* bytes = static_cast<std::byte*>(alloca(length));
+			if (!read(bytes, length))
 				return false;
-			return signature.doesMatch(&bytes[0], &bytes[signature.getLength()]);
+			return signature.does_match(&bytes[0], &bytes[length]);
 		}
 
 		// X86
 		// Since there can be multiple xrefs, this returns multiple addresses
-		[[nodiscard]] std::vector<SafePointer> findXREFs(SignatureScanner::XRefTypes types, const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable()) const
+		[[nodiscard]] std::vector<SafePointer> find_xrefs(SignatureScanner::XRefTypes types, const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable()) const
 			requires MemoryManager::Viewable<typename MemMgr::RegionT>
 		{
-			std::vector<SafePointer> newPointers;
+			std::vector<SafePointer> new_pointers;
 
 			SignatureScanner::XRefSignature signature(types, pointer);
-			for (const auto& region : memoryManager->getLayout()) {
-				if (!searchConstraints.allowsRegion(region))
+			for (const auto& region : memory_manager->get_layout()) {
+				if (!search_constraints.allows_region(region))
 					continue;
 
 				auto view = region.view();
@@ -203,21 +204,21 @@ namespace BCRL {
 				auto begin = view.cbegin();
 				auto end = view.cend();
 
-				searchConstraints.clampToAddressRange(region, view.cbegin(), begin, end);
+				search_constraints.clamp_to_address_range(region, view.cbegin(), begin, end);
 
-				signature.all(begin, end, detail::LambdaInserter([&newPointers, this](decltype(begin) match) {
-					newPointers.emplace_back(*memoryManager, reinterpret_cast<std::uintptr_t>(match.base()));
+				signature.all(begin, end, detail::LambdaInserter([&new_pointers, this](decltype(begin) match) {
+					new_pointers.emplace_back(*memory_manager, reinterpret_cast<std::uintptr_t>(match.base()));
 				}));
 			}
 
-			return newPointers;
+			return new_pointers;
 		}
 
 	private:
 		static constexpr bool is64Bit = sizeof(void*) == 8;
 
 	public:
-		SafePointer& relativeToAbsolute()
+		SafePointer& relative_to_absolute()
 		{
 			using RelAddrType = std::conditional_t<is64Bit, int32_t, int16_t>;
 
@@ -228,16 +229,16 @@ namespace BCRL {
 
 			return add(sizeof(RelAddrType) + offset.value());
 		}
-		SafePointer& nextInstruction()
+		SafePointer& next_instruction()
 		{
-			static constexpr std::size_t longestX86Insn = 15;
+			static constexpr std::size_t LONGEST_X86_INSN = 15;
 
-			if (!isValid(longestX86Insn)) {
+			if (!is_valid(LONGEST_X86_INSN)) {
 				return invalidate();
 			}
 
-			std::array<std::byte, longestX86Insn> bytes{};
-			if (!read(&bytes, longestX86Insn)) {
+			std::array<std::byte, LONGEST_X86_INSN> bytes{};
+			if (!read(&bytes, LONGEST_X86_INSN)) {
 				return invalidate();
 			}
 
@@ -245,13 +246,13 @@ namespace BCRL {
 		}
 
 		// Filters
-		[[nodiscard]] bool filter(const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable()) const
+		[[nodiscard]] bool filter(const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable()) const
 		{
-			auto* region = memoryManager->getLayout().findRegion(pointer);
-			if (!region || !searchConstraints.allowsRegion(*region))
+			auto* region = memory_manager->get_layout().find_region(pointer);
+			if (!region || !search_constraints.allows_region(*region))
 				return false;
 
-			return searchConstraints.allowsAddress(pointer);
+			return search_constraints.allows_address(pointer);
 		}
 
 		constexpr std::strong_ordering operator<=>(const SafePointer& other) const
@@ -264,20 +265,20 @@ namespace BCRL {
 			return pointer == other.pointer;
 		}
 
-		[[nodiscard]] constexpr const MemMgr& getMemoryManager() const
+		[[nodiscard]] constexpr const MemMgr& get_memory_manager() const
 		{
-			return *memoryManager;
+			return *memory_manager;
 		}
 
 		/**
 		 * @returns if a previous operation failed
 		 */
-		[[nodiscard]] constexpr bool isMarkedInvalid() const
+		[[nodiscard]] constexpr bool is_marked_invalid() const
 		{
 			return invalid;
 		}
 
-		[[nodiscard]] constexpr std::uintptr_t getPointer() const
+		[[nodiscard]] constexpr std::uintptr_t get_pointer() const
 		{
 			return pointer;
 		};

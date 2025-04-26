@@ -9,7 +9,7 @@ namespace BCRL::detail {
 	using ConditionalField = std::conditional_t<Cond, T, std::monostate>;
 
 	template <typename T>
-	auto conditionalInit(auto... pack)
+	auto conditional_init(auto... pack)
 	{
 		if constexpr (std::is_same_v<T, std::monostate>)
 			return std::monostate{};

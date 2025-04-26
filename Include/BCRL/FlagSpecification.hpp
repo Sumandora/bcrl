@@ -53,23 +53,23 @@ namespace BCRL {
 		{
 		}
 
-		[[nodiscard]] bool matchesReadable(bool readable) const
+		[[nodiscard]] bool matches_readable(bool readable) const
 		{
 			return matches(this->readable, readable);
 		}
 
-		[[nodiscard]] bool matchesWritable(bool writable) const
+		[[nodiscard]] bool matches_writable(bool writable) const
 		{
 			return matches(this->writable, writable);
 		}
-		[[nodiscard]] bool matchesExecutable(bool executable) const
+		[[nodiscard]] bool matches_executable(bool executable) const
 		{
 			return matches(this->executable, executable);
 		}
 
 		bool operator==(MemoryManager::Flags flags) const
 		{
-			return matchesReadable(flags.isReadable()) && matchesWritable(flags.isWriteable()) && matchesExecutable(flags.isExecutable());
+			return matches_readable(flags.is_readable()) && matches_writable(flags.is_writeable()) && matches_executable(flags.is_executable());
 		}
 	};
 }

@@ -25,31 +25,31 @@
 
 namespace BCRL {
 	enum class FinalizationError : std::uint8_t {
-		NoPointersLeft,
-		TooManyPointersLeft,
+		NO_POINTERS_LEFT,
+		TOO_MANY_POINTERS_LEFT,
 	};
 
 	template <typename MemMgr>
 	class Session {
 		using InnerSafePointer = SafePointer<MemMgr>;
 
-		const MemMgr* memoryManager;
+		const MemMgr* memory_manager;
 		std::vector<InnerSafePointer> pointers;
 
 	public:
-		constexpr Session(const MemMgr& memoryManager, std::vector<InnerSafePointer>&& pointers)
-			: memoryManager(&memoryManager)
+		constexpr Session(const MemMgr& memory_manager, std::vector<InnerSafePointer>&& pointers)
+			: memory_manager(&memory_manager)
 			, pointers(std::move(pointers))
 		{
 		}
 
-		constexpr Session(const MemMgr& memoryManager, const std::ranges::range auto& pointers)
-			: memoryManager(&memoryManager)
+		constexpr Session(const MemMgr& memory_manager, const std::ranges::range auto& pointers)
+			: memory_manager(&memory_manager)
 			, pointers()
 		{
 			this->pointers.reserve(pointers.size());
 			for (auto pointer : pointers) {
-				this->pointers.emplace_back(memoryManager, pointer);
+				this->pointers.emplace_back(memory_manager, pointer);
 			}
 		}
 
@@ -58,85 +58,85 @@ namespace BCRL {
 		// Manipulation
 		Session& add(std::integral auto operand) // Advances all pointers forward
 		{
-			return forEach([operand](InnerSafePointer& safePointer) {
-				safePointer.add(operand);
+			return for_each([operand](InnerSafePointer& safe_pointer) {
+				safe_pointer.add(operand);
 			});
 		}
 
 		Session& sub(std::integral auto operand) // Inverse of above
 		{
-			return forEach([operand](InnerSafePointer& safePointer) {
-				safePointer.sub(operand);
+			return for_each([operand](InnerSafePointer& safe_pointer) {
+				safe_pointer.sub(operand);
 			});
 		}
 
 		Session& dereference() // Follows a pointer
 		{
-			return forEach([](InnerSafePointer& safePointer) {
-				safePointer.dereference();
+			return for_each([](InnerSafePointer& safe_pointer) {
+				safe_pointer.dereference();
 			});
 		}
 
 		// Signatures
 		// Prev occurrence of signature
-		Session& prevSignatureOccurrence(
+		Session& prev_signature_occurrence(
 			const SignatureScanner::PatternSignature& signature,
-			const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
+			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
 		{
-			return forEach([&signature, &searchConstraints](InnerSafePointer& safePointer) {
-				safePointer.prevSignatureOccurrence(signature, searchConstraints);
+			return for_each([&signature, &search_constraints](InnerSafePointer& safe_pointer) {
+				safe_pointer.prev_signature_occurrence(signature, search_constraints);
 			});
 		}
 
 		// Next occurrence of signature
-		Session& nextSignatureOccurrence(
+		Session& next_signature_occurrence(
 			const SignatureScanner::PatternSignature& signature,
-			const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
+			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
 		{
-			return forEach([&signature, &searchConstraints](InnerSafePointer& safePointer) {
-				safePointer.nextSignatureOccurrence(signature, searchConstraints);
+			return for_each([&signature, &search_constraints](InnerSafePointer& safe_pointer) {
+				safe_pointer.next_signature_occurrence(signature, search_constraints);
 			});
 		}
 
 		// Filters
-		Session& filter(const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
+		Session& filter(const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
 		{
-			return filter([&searchConstraints](const InnerSafePointer& safePointer) {
-				return safePointer.filter(searchConstraints);
+			return filter([&search_constraints](const InnerSafePointer& safe_pointer) {
+				return safe_pointer.filter(search_constraints);
 			});
 		}
 
 		// X86
-		Session& findXREFs(SignatureScanner::XRefTypes types, const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
+		Session& find_xrefs(SignatureScanner::XRefTypes types, const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
 		{
-			return flatMap([types, &searchConstraints](const InnerSafePointer& safePointer) {
-				return safePointer.findXREFs(types, searchConstraints);
+			return flat_map([types, &search_constraints](const InnerSafePointer& safe_pointer) {
+				return safe_pointer.find_xrefs(types, search_constraints);
 			});
 		}
 
-		Session& relativeToAbsolute()
+		Session& relative_to_absolute()
 		{
-			return forEach([](InnerSafePointer& safePointer) {
-				safePointer.relativeToAbsolute();
+			return for_each([](InnerSafePointer& safe_pointer) {
+				safe_pointer.relative_to_absolute();
 			});
 		}
 
-		Session& nextInstruction()
+		Session& next_instruction()
 		{
-			return forEach([](InnerSafePointer& safePointer) {
-				safePointer.nextInstruction();
+			return for_each([](InnerSafePointer& safe_pointer) {
+				safe_pointer.next_instruction();
 			});
 		}
 
 		// Advanced Flow
 		template <typename F>
 			requires std::invocable<F, InnerSafePointer&>
-		Session& forEach(const F& body) // Calls action on each pointer
+		Session& for_each(const F& body) // Calls action on each pointer
 		{
 			// This looks a bit weird, but it basically acts as a for loop which can also delete invalid entries
-			std::erase_if(pointers, [&body](InnerSafePointer& safePointer) {
-				body(safePointer);
-				return !safePointer.isValid();
+			std::erase_if(pointers, [&body](InnerSafePointer& safe_pointer) {
+				body(safe_pointer);
+				return !safe_pointer.is_valid();
 			});
 			return *this;
 		}
@@ -144,8 +144,8 @@ namespace BCRL {
 			requires std::is_invocable_r_v<bool, F, InnerSafePointer&>
 		Session& repeater(const F& action) // Repeats action until false is returned
 		{
-			return forEach([&action](InnerSafePointer& safePointer) {
-				while (action(safePointer))
+			return for_each([&action](InnerSafePointer& safe_pointer) {
+				while (action(safe_pointer))
 					;
 			});
 		}
@@ -153,35 +153,35 @@ namespace BCRL {
 			requires std::invocable<F, InnerSafePointer&>
 		Session& repeater(std::size_t iterations, const F& action) // Repeats action `iterations` times
 		{
-			return forEach([iterations, &action](InnerSafePointer& safePointer) {
+			return for_each([iterations, &action](InnerSafePointer& safe_pointer) {
 				for (std::size_t i = 0; i < iterations; i++)
-					action(safePointer);
+					action(safe_pointer);
 			});
 		}
 		template <typename F>
 			requires std::is_invocable_r_v<bool, F, const InnerSafePointer&>
 		Session& filter(const F& predicate) // Filters out non-conforming pointers
 		{
-			return forEach([&predicate](InnerSafePointer& safePointer) {
-				if (!predicate(safePointer))
-					safePointer.invalidate();
+			return for_each([&predicate](InnerSafePointer& safe_pointer) {
+				if (!predicate(safe_pointer))
+					safe_pointer.invalidate();
 			});
 		}
 		template <typename F>
 			requires std::is_invocable_r_v<std::vector<InnerSafePointer>, F, const InnerSafePointer&>
-		Session& flatMap(const F& transformer) // Maps pointer to other pointers
+		Session& flat_map(const F& transformer) // Maps pointer to other pointers
 		{
-			std::vector<InnerSafePointer> newSafePointers;
-			for (InnerSafePointer& safePointer : pointers) {
-				auto transformed = transformer(safePointer);
-				for (InnerSafePointer& newSafePointer : transformed) {
-					if (!newSafePointer.isValid())
+			std::vector<InnerSafePointer> new_safe_pointers;
+			for (InnerSafePointer& safe_pointer : pointers) {
+				auto transformed = transformer(safe_pointer);
+				for (InnerSafePointer& new_safe_pointer : transformed) {
+					if (!new_safe_pointer.is_valid())
 						continue;
 
-					newSafePointers.emplace_back(newSafePointer);
+					new_safe_pointers.emplace_back(new_safe_pointer);
 				}
 			}
-			pointers = std::move(newSafePointers);
+			pointers = std::move(new_safe_pointers);
 			return *this;
 		}
 
@@ -190,9 +190,9 @@ namespace BCRL {
 			return *this;
 		}
 
-		[[nodiscard]] constexpr const MemMgr& getMemoryManager() const
+		[[nodiscard]] constexpr const MemMgr& get_memory_manager() const
 		{
-			return *memoryManager;
+			return *memory_manager;
 		}
 
 		// Finalizing
@@ -204,12 +204,12 @@ namespace BCRL {
 		[[nodiscard]] std::expected<std::uintptr_t, FinalizationError> finalize() const // Returns a std::expected based on if there is a clear result
 		{
 			if (pointers.size() == 1)
-				return pointers.begin()->getPointer();
+				return pointers.begin()->get_pointer();
 
 			if (pointers.empty())
-				return std::unexpected(FinalizationError::NoPointersLeft);
+				return std::unexpected(FinalizationError::NO_POINTERS_LEFT);
 
-			return std::unexpected(FinalizationError::TooManyPointersLeft);
+			return std::unexpected(FinalizationError::TOO_MANY_POINTERS_LEFT);
 		}
 
 		template <typename T = std::uintptr_t>
@@ -222,17 +222,17 @@ namespace BCRL {
 
 		// Gets the last remaining pointer, but throws a std::runtime_error with a user-defined message if the pool doesn't contain exactly one pointer
 		template <typename T = std::uintptr_t>
-		[[nodiscard]] T expect(const std::string& none, const std::string& tooMany) const
+		[[nodiscard]] T expect(const std::string& none, const std::string& too_many) const
 		{
 			auto result = finalize<T>();
 
 			if (!result.has_value())
-				throw std::runtime_error{ [&none, &tooMany, error = result.error()]() {
+				throw std::runtime_error{ [&none, &too_many, error = result.error()]() {
 					switch (error) {
-					case FinalizationError::NoPointersLeft:
+					case FinalizationError::NO_POINTERS_LEFT:
 						return none;
-					case FinalizationError::TooManyPointersLeft:
-						return tooMany;
+					case FinalizationError::TOO_MANY_POINTERS_LEFT:
+						return too_many;
 					}
 					std::unreachable();
 				}() };
@@ -250,47 +250,47 @@ namespace BCRL {
 
 	// Openers/Initializers
 	template <typename MemMgr>
-	[[nodiscard]] inline Session<MemMgr> pointerList(const MemMgr& memoryManager, const std::ranges::range auto& pointers)
+	[[nodiscard]] inline Session<MemMgr> pointer_list(const MemMgr& memory_manager, const std::ranges::range auto& pointers)
 	{
-		return { memoryManager, pointers };
+		return { memory_manager, pointers };
 	}
 
 	template <typename MemMgr>
-	[[nodiscard]] inline Session<MemMgr> pointer(const MemMgr& memoryManager, std::uintptr_t pointer)
+	[[nodiscard]] inline Session<MemMgr> pointer(const MemMgr& memory_manager, std::uintptr_t pointer)
 	{
-		return pointerList(memoryManager, std::initializer_list<std::uintptr_t>{ pointer });
+		return pointer_list(memory_manager, std::initializer_list<std::uintptr_t>{ pointer });
 	}
 
 	template <typename MemMgr>
-	[[nodiscard]] inline Session<MemMgr> pointerArray(const MemMgr& memoryManager, std::uintptr_t array, std::size_t index) // e.g. Virtual function tables
+	[[nodiscard]] inline Session<MemMgr> pointer_array(const MemMgr& memory_manager, std::uintptr_t array, std::size_t index) // e.g. Virtual function tables
 	{
-		return { memoryManager, std::vector<SafePointer<MemMgr>>{ SafePointer(memoryManager, array).dereference().add(index * sizeof(std::uintptr_t)).dereference() } };
+		return { memory_manager, std::vector<SafePointer<MemMgr>>{ SafePointer(memory_manager, array).dereference().add(index * sizeof(std::uintptr_t)).dereference() } };
 	}
 
 	template <typename MemMgr>
 		requires MemoryManager::LayoutAware<MemMgr> && MemoryManager::AddressAware<typename MemMgr::RegionT> && MemoryManager::NameAware<typename MemMgr::RegionT> && MemoryManager::FlagAware<typename MemMgr::RegionT>
 	[[nodiscard]] inline Session<MemMgr> regions(
-		const MemMgr& memoryManager,
-		const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
+		const MemMgr& memory_manager,
+		const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
 	{
 		std::vector<std::uintptr_t> bases;
-		for (const auto& region : memoryManager.getLayout())
-			if (searchConstraints.allowsRegion(region))
-				bases.push_back(region.getAddress());
-		return pointerList(memoryManager, bases);
+		for (const auto& region : memory_manager.get_layout())
+			if (search_constraints.allows_region(region))
+				bases.push_back(region.get_address());
+		return pointer_list(memory_manager, bases);
 	}
 
 	template <typename MemMgr>
 		requires MemoryManager::Viewable<typename MemMgr::RegionT>
 	[[nodiscard]] inline Session<MemMgr> signature(
-		const MemMgr& memoryManager,
+		const MemMgr& memory_manager,
 		const SignatureScanner::PatternSignature& signature,
-		const SearchConstraints<typename MemMgr::RegionT>& searchConstraints = everything<MemMgr>().thatsReadable())
+		const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
 	{
 		std::vector<std::uintptr_t> pointers{};
 
-		for (const auto& region : memoryManager.getLayout()) {
-			if (!searchConstraints.allowsRegion(region))
+		for (const auto& region : memory_manager.get_layout()) {
+			if (!search_constraints.allows_region(region))
 				continue;
 
 			auto view = region.view();
@@ -298,14 +298,14 @@ namespace BCRL {
 			auto begin = view.cbegin();
 			auto end = view.cend();
 
-			searchConstraints.clampToAddressRange(region, view.cbegin(), begin, end);
+			search_constraints.clamp_to_address_range(region, view.cbegin(), begin, end);
 
 			signature.all(begin, end, detail::LambdaInserter([&pointers](decltype(begin) p) {
 				pointers.push_back(reinterpret_cast<std::uintptr_t>(p.base()));
 			}));
 		}
 
-		return { memoryManager, pointers };
+		return { memory_manager, pointers };
 	}
 }
 

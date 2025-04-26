@@ -2,15 +2,15 @@
 
 extern "C" {
 
-void anotherSecretMethod();
+void another_secret_method();
 
-void superSecretMethod()
+void super_secret_method()
 {
 	puts("You will never find me!");
-	anotherSecretMethod();
+	another_secret_method();
 }
 
-void anotherSecretMethod()
+void another_secret_method()
 {
 	puts("I really really really really really love Linux!");
 }
