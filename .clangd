@@ -1,0 +1,7 @@
+CompileFlags:
+  Add: [ "-Wall", "-Wextra", "-Wpedantic" ]
+Diagnostics:
+  ClangTidy:
+    FastCheckFilter: None
+  UnusedIncludes: Strict
+  MissingIncludes: Strict
