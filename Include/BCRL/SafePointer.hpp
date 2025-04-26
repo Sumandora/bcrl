@@ -116,7 +116,7 @@ namespace BCRL {
 		}
 
 		// Patterns
-		// Prev occurrence of pattern signature
+		// Previous occurrence of pattern signature
 		SafePointer& prev_signature_occurrence(
 			const SignatureScanner::PatternSignature& signature,
 			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
@@ -217,12 +217,15 @@ namespace BCRL {
 		}
 
 	private:
-		static constexpr bool is64Bit = sizeof(void*) == 8;
+		static constexpr bool IS_64_BIT = sizeof(void*) == 8;
+		static constexpr LengthDisassembler::MachineMode DEFAULT_MACHINE_MODE = IS_64_BIT
+			? LengthDisassembler::MachineMode::LONG_MODE
+			: LengthDisassembler::MachineMode::LONG_COMPATIBILITY_MODE;
 
 	public:
 		SafePointer& relative_to_absolute()
 		{
-			using RelAddrType = std::conditional_t<is64Bit, int32_t, int16_t>;
+			using RelAddrType = std::conditional_t<IS_64_BIT, int32_t, int16_t>;
 
 			std::optional<RelAddrType> offset = read<RelAddrType>();
 			if (!offset.has_value()) {
@@ -231,7 +234,8 @@ namespace BCRL {
 
 			return add(sizeof(RelAddrType) + offset.value());
 		}
-		SafePointer& next_instruction()
+
+		SafePointer& next_instruction(LengthDisassembler::MachineMode mode = DEFAULT_MACHINE_MODE)
 		{
 			auto* region = memory_manager->get_layout().find_region(pointer);
 			if (!region)
@@ -241,10 +245,10 @@ namespace BCRL {
 
 			static constexpr std::size_t LONGEST_X86_INSN = LengthDisassembler::MAX_INSTRUCTION_LENGTH;
 
-			std::size_t length = std::min(end - pointer, LONGEST_X86_INSN);
+			std::size_t max_length = std::min(end - pointer, LONGEST_X86_INSN);
 
 			std::array<std::byte, LONGEST_X86_INSN> bytes{};
-			if (!read(&bytes, length)) {
+			if (!read(&bytes, max_length)) {
 				return invalidate();
 			}
 
@@ -252,8 +256,8 @@ namespace BCRL {
 
 			std::expected<LengthDisassembler::Instruction, LengthDisassembler::Error>
 				instruction = LengthDisassembler::disassemble(bytes.data(),
-					is64Bit ? LONG_MODE : LONG_COMPATIBILITY_MODE,
-					length);
+					mode,
+					max_length);
 
 			if (!instruction.has_value()) {
 				return invalidate();

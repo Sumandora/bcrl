@@ -11,6 +11,8 @@
 #include "SignatureScanner/PatternSignature.hpp"
 #include "SignatureScanner/XRefSignature.hpp"
 
+#include "LengthDisassembler/LengthDisassembler.hpp"
+
 #include <alloca.h>
 #include <concepts>
 #include <cstddef>
@@ -121,10 +123,12 @@ namespace BCRL {
 			});
 		}
 
-		Session& next_instruction()
+		Session& next_instruction(LengthDisassembler::MachineMode mode = (sizeof(void*) == 8)
+				? LengthDisassembler::MachineMode::LONG_MODE
+				: LengthDisassembler::MachineMode::LONG_COMPATIBILITY_MODE)
 		{
-			return for_each([](InnerSafePointer& safe_pointer) {
-				safe_pointer.next_instruction();
+			return for_each([mode](InnerSafePointer& safe_pointer) {
+				safe_pointer.next_instruction(mode);
 			});
 		}
 
