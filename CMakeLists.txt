@@ -20,15 +20,15 @@ if(NOT TARGET SignatureScanner)
 endif()
 target_link_libraries(BCRL INTERFACE SignatureScanner)
 
-if(NOT TARGET length-disassembler)
+if(NOT TARGET LengthDisassembler)
 	FetchContent_Declare(
 		LengthDisassembler
-		GIT_REPOSITORY https://github.com/Jovvik/length-disassembler
+		GIT_REPOSITORY https://github.com/Sumandora/LengthDisassembler
 		GIT_PROGRESS TRUE
-		GIT_TAG 88fd89c)
+		GIT_TAG 1.0)
 	FetchContent_MakeAvailable(LengthDisassembler)
 endif()
-target_link_libraries(BCRL INTERFACE length-disassembler)
+target_link_libraries(BCRL INTERFACE LengthDisassembler)
 
 if(NOT TARGET MemoryManager)
 	FetchContent_Declare(
