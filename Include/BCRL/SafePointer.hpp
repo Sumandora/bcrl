@@ -239,11 +239,11 @@ namespace BCRL {
 
 			std::uintptr_t end = region->get_address() + region->get_length();
 
-			static constexpr std::size_t longestX86Insn = 15;
+			static constexpr std::size_t LONGEST_X86_INSN = LengthDisassembler::MAX_INSTRUCTION_LENGTH;
 
-			std::size_t length = std::min(end - pointer, longestX86Insn);
+			std::size_t length = std::min(end - pointer, LONGEST_X86_INSN);
 
-			std::array<std::byte, longestX86Insn> bytes{};
+			std::array<std::byte, LONGEST_X86_INSN> bytes{};
 			if (!read(&bytes, length)) {
 				return invalidate();
 			}

@@ -25,7 +25,7 @@ if(NOT TARGET LengthDisassembler)
 		LengthDisassembler
 		GIT_REPOSITORY https://github.com/Sumandora/LengthDisassembler
 		GIT_PROGRESS TRUE
-		GIT_TAG 1.0)
+		GIT_TAG 1.0.1)
 	FetchContent_MakeAvailable(LengthDisassembler)
 endif()
 target_link_libraries(BCRL INTERFACE LengthDisassembler)
