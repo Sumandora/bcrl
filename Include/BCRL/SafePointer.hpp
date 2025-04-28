@@ -146,7 +146,7 @@ namespace BCRL {
 			if (hit == rend)
 				return invalidate();
 
-			pointer = reinterpret_cast<std::uintptr_t>(std::to_address(hit));
+			pointer = region->get_address() - std::distance(rbegin, hit);
 			return revalidate();
 		}
 
@@ -175,7 +175,7 @@ namespace BCRL {
 			if (hit == end)
 				return invalidate();
 
-			pointer = reinterpret_cast<std::uintptr_t>(std::to_address(hit));
+			pointer = region->get_address() + std::distance(begin, hit);
 			return revalidate();
 		}
 
@@ -208,8 +208,8 @@ namespace BCRL {
 
 				search_constraints.clamp_to_address_range(region, view.cbegin(), begin, end);
 
-				signature.all(begin, end, detail::LambdaInserter([&new_pointers, this](decltype(begin) match) {
-					new_pointers.emplace_back(*memory_manager, reinterpret_cast<std::uintptr_t>(match.base()));
+				signature.all(begin, end, detail::LambdaInserter([&](decltype(begin) match) {
+					new_pointers.emplace_back(*memory_manager, region.get_address() + std::distance(begin, match));
 				}));
 			}
 

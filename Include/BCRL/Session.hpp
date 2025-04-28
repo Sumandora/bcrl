@@ -304,8 +304,8 @@ namespace BCRL {
 
 			search_constraints.clamp_to_address_range(region, view.cbegin(), begin, end);
 
-			signature.all(begin, end, detail::LambdaInserter([&pointers](decltype(begin) p) {
-				pointers.push_back(reinterpret_cast<std::uintptr_t>(p.base()));
+			signature.all(begin, end, detail::LambdaInserter([&](decltype(begin) p) {
+				pointers.push_back(region.get_address() + std::distance(begin, p));
 			}));
 		}
 
