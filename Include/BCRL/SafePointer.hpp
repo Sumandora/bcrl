@@ -213,7 +213,7 @@ namespace BCRL {
 
 				signature.all(begin, end, detail::LambdaInserter([&](decltype(begin) match) {
 					new_pointers.emplace_back(*memory_manager, region.get_address() + std::distance(view.cbegin(), match));
-				}));
+				}), region.get_address() + std::distance(view.cbegin(), begin));
 			}
 
 			return new_pointers;

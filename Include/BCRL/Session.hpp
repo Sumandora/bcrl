@@ -22,6 +22,7 @@
 #include <ranges>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -304,9 +305,15 @@ namespace BCRL {
 
 			search_constraints.clamp_to_address_range(region, view.cbegin(), begin, end);
 
-			signature.all(begin, end, detail::LambdaInserter([&](decltype(begin) p) {
-				pointers.push_back(region.get_address() + std::distance(view.cbegin(), p));
-			}));
+			if constexpr (std::same_as<decltype(signature), const SignatureScanner::XRefSignature&>) {
+				signature.all(begin, end, detail::LambdaInserter([&](decltype(begin) p) {
+					pointers.push_back(region.get_address() + std::distance(view.cbegin(), p));
+				}), region.get_address() + std::distance(view.cbegin(), begin));
+			} else {
+				signature.all(begin, end, detail::LambdaInserter([&](decltype(begin) p) {
+					pointers.push_back(region.get_address() + std::distance(view.cbegin(), p));
+				}));
+			}
 		}
 
 		return { memory_manager, pointers };
