@@ -12,6 +12,7 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -52,7 +53,7 @@ namespace BCRL {
 		{
 		}
 
-		SearchConstraints& with_name(const std::string& name)
+		SearchConstraints& with_name(std::string_view name)
 			requires MemoryManager::NameAware<Region>
 		{
 			predicates.push_back([name](const Region& r) {
@@ -62,7 +63,7 @@ namespace BCRL {
 			return *this;
 		}
 
-		SearchConstraints& with_path(const std::string& path)
+		SearchConstraints& with_path(std::string_view path)
 			requires MemoryManager::PathAware<Region>
 		{
 			predicates.push_back([path](const Region& r) {
