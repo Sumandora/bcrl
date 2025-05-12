@@ -193,13 +193,24 @@ namespace BCRL {
 		}
 
 		// X86
+	private:
+		static constexpr bool IS_64_BIT = sizeof(void*) == 8;
+		static constexpr LengthDisassembler::MachineMode DEFAULT_MACHINE_MODE = IS_64_BIT
+			? LengthDisassembler::MachineMode::LONG_MODE
+			: LengthDisassembler::MachineMode::LONG_COMPATIBILITY_MODE;
+		using RelAddrType = std::conditional_t<IS_64_BIT, int32_t, int16_t>;
+
+	public:
 		// Since there can be multiple xrefs, this returns multiple addresses
-		[[nodiscard]] std::vector<SafePointer> find_xrefs(SignatureScanner::XRefTypes types, const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable()) const
+		[[nodiscard]] std::vector<SafePointer> find_xrefs(
+			SignatureScanner::XRefTypes types,
+			std::uint8_t instruction_length,
+			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable()) const
 			requires MemoryManager::Viewable<typename MemMgr::RegionT>
 		{
 			std::vector<SafePointer> new_pointers;
 
-			SignatureScanner::XRefSignature signature(types, pointer);
+			SignatureScanner::XRefSignature signature{ types, pointer, instruction_length };
 			for (const auto& region : memory_manager->get_layout()) {
 				if (!search_constraints.allows_region(region))
 					continue;
@@ -213,22 +224,23 @@ namespace BCRL {
 
 				signature.all(begin, end, detail::LambdaInserter([&](decltype(begin) match) {
 					new_pointers.emplace_back(*memory_manager, region.get_address() + std::distance(view.cbegin(), match));
-				}), region.get_address() + std::distance(view.cbegin(), begin));
+				}),
+					region.get_address() + std::distance(view.cbegin(), begin));
 			}
 
 			return new_pointers;
 		}
 
-	private:
-		static constexpr bool IS_64_BIT = sizeof(void*) == 8;
-		static constexpr LengthDisassembler::MachineMode DEFAULT_MACHINE_MODE = IS_64_BIT
-			? LengthDisassembler::MachineMode::LONG_MODE
-			: LengthDisassembler::MachineMode::LONG_COMPATIBILITY_MODE;
+		[[nodiscard]] std::vector<SafePointer> find_xrefs(
+			SignatureScanner::XRefTypes types,
+			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable()) const
+			requires MemoryManager::Viewable<typename MemMgr::RegionT>
+		{
+			return find_xrefs(types, sizeof(RelAddrType), search_constraints);
+		}
 
-	public:
 		SafePointer& relative_to_absolute()
 		{
-			using RelAddrType = std::conditional_t<IS_64_BIT, int32_t, int16_t>;
 
 			std::optional<RelAddrType> offset = read<RelAddrType>();
 			if (!offset.has_value()) {
