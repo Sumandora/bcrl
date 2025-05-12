@@ -110,7 +110,19 @@ namespace BCRL {
 		}
 
 		// X86
-		Session& find_xrefs(SignatureScanner::XRefTypes types, const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
+		Session& find_xrefs(
+			SignatureScanner::XRefTypes types,
+			std::uint8_t instruction_length,
+			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
+		{
+			return flat_map([types, instruction_length, &search_constraints](const InnerSafePointer& safe_pointer) {
+				return safe_pointer.find_xrefs(types, instruction_length, search_constraints);
+			});
+		}
+
+		Session& find_xrefs(
+			SignatureScanner::XRefTypes types,
+			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
 		{
 			return flat_map([types, &search_constraints](const InnerSafePointer& safe_pointer) {
 				return safe_pointer.find_xrefs(types, search_constraints);
@@ -308,7 +320,8 @@ namespace BCRL {
 			if constexpr (std::same_as<decltype(signature), const SignatureScanner::XRefSignature&>) {
 				signature.all(begin, end, detail::LambdaInserter([&](decltype(begin) p) {
 					pointers.push_back(region.get_address() + std::distance(view.cbegin(), p));
-				}), region.get_address() + std::distance(view.cbegin(), begin));
+				}),
+					region.get_address() + std::distance(view.cbegin(), begin));
 			} else {
 				signature.all(begin, end, detail::LambdaInserter([&](decltype(begin) p) {
 					pointers.push_back(region.get_address() + std::distance(view.cbegin(), p));
