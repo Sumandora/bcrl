@@ -21,7 +21,7 @@ int main()
 
 	using namespace BCRL;
 	MemoryManager::LinuxMemoryManager<true, true, true> local_memory_manager;
-	local_memory_manager.update();
+	local_memory_manager.sync_layout();
 
 	/**
 	 *	super_secret_method:

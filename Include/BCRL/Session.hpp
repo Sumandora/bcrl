@@ -266,8 +266,8 @@ namespace BCRL {
 	};
 
 	// Openers/Initializers
-	template <typename MemMgr>
-	[[nodiscard]] inline Session<MemMgr> pointer_list(const MemMgr& memory_manager, const std::ranges::range auto& pointers)
+	template <typename MemMgr, std::ranges::range Range> requires std::same_as<std::ranges::range_value_t<Range>, std::uintptr_t>
+	[[nodiscard]] inline Session<MemMgr> pointer_list(const MemMgr& memory_manager, const Range& pointers)
 	{
 		return { memory_manager, pointers };
 	}
@@ -330,6 +330,24 @@ namespace BCRL {
 		}
 
 		return { memory_manager, pointers };
+	}
+
+	template <typename MemMgr, std::ranges::range Range> requires (MemoryManager::LocalAware<MemMgr> && MemMgr::IS_LOCAL && std::is_pointer_v<std::ranges::range_value_t<Range>>)
+	[[nodiscard]] inline Session<MemMgr> pointer_list(const MemMgr& memory_manager, const Range& pointers)
+	{
+		return { memory_manager, pointers | std::views::transform([](const auto* ptr) { return reinterpret_cast<std::uintptr_t>(ptr); }) };
+	}
+
+	template <typename MemMgr> requires (MemoryManager::LocalAware<MemMgr> && MemMgr::IS_LOCAL)
+	[[nodiscard]] inline Session<MemMgr> pointer(const MemMgr& memory_manager, void* pointer)
+	{
+		return pointer(memory_manager, reinterpret_cast<std::uintptr_t>(pointer));
+	}
+
+	template <typename MemMgr> requires (MemoryManager::LocalAware<MemMgr> && MemMgr::IS_LOCAL)
+	[[nodiscard]] inline Session<MemMgr> pointer_array(const MemMgr& memory_manager, const void* array, std::size_t index) // e.g. Virtual function tables
+	{
+		return pointer_array(memory_manager, reinterpret_cast<std::uintptr_t>(array), index);
 	}
 }
 
