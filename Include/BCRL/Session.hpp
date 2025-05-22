@@ -341,7 +341,7 @@ namespace BCRL {
 	template <typename MemMgr> requires (MemoryManager::LocalAware<MemMgr> && MemMgr::IS_LOCAL)
 	[[nodiscard]] inline Session<MemMgr> pointer(const MemMgr& memory_manager, void* pointer)
 	{
-		return pointer(memory_manager, reinterpret_cast<std::uintptr_t>(pointer));
+		return BCRL::pointer(memory_manager, reinterpret_cast<std::uintptr_t>(pointer));
 	}
 
 	template <typename MemMgr> requires (MemoryManager::LocalAware<MemMgr> && MemMgr::IS_LOCAL)
