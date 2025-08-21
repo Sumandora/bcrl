@@ -159,7 +159,7 @@ namespace BCRL {
 		}
 		template <typename F>
 			requires std::is_invocable_r_v<bool, F, InnerSafePointer&>
-		Session& repeater(const F& action) // Repeats action until false is returned
+		Session& repeat_while(const F& action) // Repeats action until false is returned
 		{
 			return for_each([&action](InnerSafePointer& safe_pointer) {
 				while (action(safe_pointer))
@@ -168,7 +168,7 @@ namespace BCRL {
 		}
 		template <typename F>
 			requires std::invocable<F, InnerSafePointer&>
-		Session& repeater(std::size_t iterations, const F& action) // Repeats action `iterations` times
+		Session& repeat_n(std::size_t iterations, const F& action) // Repeats action `iterations` times
 		{
 			return for_each([iterations, &action](InnerSafePointer& safe_pointer) {
 				for (std::size_t i = 0; i < iterations; i++)
