@@ -13,6 +13,7 @@
 
 #include "LengthDisassembler/LengthDisassembler.hpp"
 
+#include <algorithm>
 #include <alloca.h>
 #include <concepts>
 #include <cstddef>
@@ -20,6 +21,7 @@
 #include <expected>
 #include <initializer_list>
 #include <ranges>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -155,6 +157,12 @@ namespace BCRL {
 				body(safe_pointer);
 				return !safe_pointer.is_valid();
 			});
+
+			// Remove duplicates
+			std::ranges::sort(pointers);
+			auto r = std::ranges::unique(pointers);
+			pointers.erase(r.begin(), r.end());
+
 			return *this;
 		}
 		template <typename F>
@@ -188,17 +196,18 @@ namespace BCRL {
 			requires std::is_invocable_r_v<std::vector<InnerSafePointer>, F, const InnerSafePointer&>
 		Session& flat_map(const F& transformer) // Maps pointer to other pointers
 		{
-			std::vector<InnerSafePointer> new_safe_pointers;
+			std::set<InnerSafePointer> new_safe_pointers;
 			for (InnerSafePointer& safe_pointer : pointers) {
 				auto transformed = transformer(safe_pointer);
 				for (InnerSafePointer& new_safe_pointer : transformed) {
 					if (!new_safe_pointer.is_valid())
 						continue;
 
-					new_safe_pointers.emplace_back(new_safe_pointer);
+					new_safe_pointers.emplace(new_safe_pointer);
 				}
 			}
-			pointers = std::move(new_safe_pointers);
+
+			pointers = std::vector<InnerSafePointer>(new_safe_pointers.begin(), new_safe_pointers.end());
 			return *this;
 		}
 
@@ -266,7 +275,8 @@ namespace BCRL {
 	};
 
 	// Openers/Initializers
-	template <typename MemMgr, std::ranges::range Range> requires std::same_as<std::ranges::range_value_t<Range>, std::uintptr_t>
+	template <typename MemMgr, std::ranges::range Range>
+		requires std::same_as<std::ranges::range_value_t<Range>, std::uintptr_t>
 	[[nodiscard]] inline Session<MemMgr> pointer_list(const MemMgr& memory_manager, const Range& pointers)
 	{
 		return { memory_manager, pointers };
@@ -332,19 +342,22 @@ namespace BCRL {
 		return { memory_manager, pointers };
 	}
 
-	template <typename MemMgr, std::ranges::range Range> requires (MemoryManager::LocalAware<MemMgr> && MemMgr::IS_LOCAL && std::is_pointer_v<std::ranges::range_value_t<Range>>)
+	template <typename MemMgr, std::ranges::range Range>
+		requires(MemoryManager::LocalAware<MemMgr> && MemMgr::IS_LOCAL && std::is_pointer_v<std::ranges::range_value_t<Range>>)
 	[[nodiscard]] inline Session<MemMgr> pointer_list(const MemMgr& memory_manager, const Range& pointers)
 	{
 		return { memory_manager, pointers | std::views::transform([](const auto* ptr) { return reinterpret_cast<std::uintptr_t>(ptr); }) };
 	}
 
-	template <typename MemMgr> requires (MemoryManager::LocalAware<MemMgr> && MemMgr::IS_LOCAL)
+	template <typename MemMgr>
+		requires(MemoryManager::LocalAware<MemMgr> && MemMgr::IS_LOCAL)
 	[[nodiscard]] inline Session<MemMgr> pointer(const MemMgr& memory_manager, void* pointer)
 	{
 		return BCRL::pointer(memory_manager, reinterpret_cast<std::uintptr_t>(pointer));
 	}
 
-	template <typename MemMgr> requires (MemoryManager::LocalAware<MemMgr> && MemMgr::IS_LOCAL)
+	template <typename MemMgr>
+		requires(MemoryManager::LocalAware<MemMgr> && MemMgr::IS_LOCAL)
 	[[nodiscard]] inline Session<MemMgr> pointer_array(const MemMgr& memory_manager, const void* array, std::size_t index) // e.g. Virtual function tables
 	{
 		return pointer_array(memory_manager, reinterpret_cast<std::uintptr_t>(array), index);
