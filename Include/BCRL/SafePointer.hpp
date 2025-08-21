@@ -20,6 +20,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <limits>
 #include <optional>
 #include <type_traits>
 #include <vector>
@@ -47,6 +48,11 @@ namespace BCRL {
 				return false; // It was already eliminated
 
 			std::uintptr_t p = pointer;
+
+			// Check if p + length would overflow:
+			if (std::numeric_limits<std::uintptr_t>::max() - p < length)
+				return false;
+
 			std::uintptr_t end = pointer + length;
 
 			while (end > p) {
