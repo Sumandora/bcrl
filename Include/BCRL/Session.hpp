@@ -86,20 +86,22 @@ namespace BCRL {
 		// Prev occurrence of signature
 		Session& prev_signature_occurrence(
 			const SignatureScanner::PatternSignature& signature,
-			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
+			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable(),
+			const bool match_current = false)
 		{
-			return for_each([&signature, &search_constraints](InnerSafePointer& safe_pointer) {
-				safe_pointer.prev_signature_occurrence(signature, search_constraints);
+			return for_each([&signature, &search_constraints, match_current](InnerSafePointer& safe_pointer) {
+				safe_pointer.prev_signature_occurrence(signature, search_constraints, match_current);
 			});
 		}
 
 		// Next occurrence of signature
 		Session& next_signature_occurrence(
 			const SignatureScanner::PatternSignature& signature,
-			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
+			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable(),
+			const bool match_current = false)
 		{
-			return for_each([&signature, &search_constraints](InnerSafePointer& safe_pointer) {
-				safe_pointer.next_signature_occurrence(signature, search_constraints);
+			return for_each([&signature, &search_constraints, match_current](InnerSafePointer& safe_pointer) {
+				safe_pointer.next_signature_occurrence(signature, search_constraints, match_current);
 			});
 		}
 

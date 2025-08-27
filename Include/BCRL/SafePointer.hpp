@@ -125,7 +125,8 @@ namespace BCRL {
 		// Previous occurrence of pattern signature
 		SafePointer& prev_signature_occurrence(
 			const SignatureScanner::PatternSignature& signature,
-			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
+			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable(),
+			const bool match_current = false)
 			requires MemoryManager::Viewable<typename MemMgr::RegionT>
 		{
 			auto* region = memory_manager->get_layout().find_region(pointer);
@@ -141,6 +142,9 @@ namespace BCRL {
 
 			if (pointer < pointer_end)
 				std::advance(end, pointer - pointer_end);
+
+			if (!match_current)
+				std::advance(end, -1);
 
 			search_constraints.clamp_to_address_range(*region, view.cbegin(), begin, end);
 
@@ -162,7 +166,8 @@ namespace BCRL {
 		// Next occurrence of pattern signature
 		SafePointer& next_signature_occurrence(
 			const SignatureScanner::PatternSignature& signature,
-			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
+			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable(),
+			const bool match_current = false)
 			requires MemoryManager::Viewable<typename MemMgr::RegionT>
 		{
 			auto* region = memory_manager->get_layout().find_region(pointer);
@@ -176,6 +181,9 @@ namespace BCRL {
 
 			if (pointer > region->get_address())
 				std::advance(begin, pointer - region->get_address());
+
+			if (!match_current)
+				std::advance(begin, 1);
 
 			search_constraints.clamp_to_address_range(*region, view.cbegin(), begin, end);
 
