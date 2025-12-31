@@ -84,29 +84,44 @@ namespace BCRL {
 
 		// Signatures
 		// Prev occurrence of signature
+		template <typename... Constraints>
 		Session& prev_signature_occurrence(
 			const SignatureScanner::PatternSignature& signature,
-			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable(),
+			const SearchConstraints<Constraints...>& search_constraints,
 			const bool match_current = false)
 		{
 			return for_each([&signature, &search_constraints, match_current](InnerSafePointer& safe_pointer) {
 				safe_pointer.prev_signature_occurrence(signature, search_constraints, match_current);
 			});
 		}
+		Session& prev_signature_occurrence(
+			const SignatureScanner::PatternSignature& signature,
+			const bool match_current = false)
+		{
+			return prev_signature_occurrence(signature, EVERYTHING_READABLE, match_current);
+		}
 
 		// Next occurrence of signature
+		template <typename... Constraints>
 		Session& next_signature_occurrence(
 			const SignatureScanner::PatternSignature& signature,
-			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable(),
+			const SearchConstraints<Constraints...>& search_constraints,
 			const bool match_current = false)
 		{
 			return for_each([&signature, &search_constraints, match_current](InnerSafePointer& safe_pointer) {
 				safe_pointer.next_signature_occurrence(signature, search_constraints, match_current);
 			});
 		}
+		Session& next_signature_occurrence(
+			const SignatureScanner::PatternSignature& signature,
+			const bool match_current = false)
+		{
+			return next_signature_occurrence(signature, EVERYTHING_READABLE, match_current);
+		}
 
 		// Filters
-		Session& filter(const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
+		template <typename... Constraints>
+		Session& filter(const SearchConstraints<Constraints...>& search_constraints)
 		{
 			return filter([&search_constraints](const InnerSafePointer& safe_pointer) {
 				return safe_pointer.filter(search_constraints);
@@ -114,23 +129,36 @@ namespace BCRL {
 		}
 
 		// X86
+		template <typename... Constraints>
 		Session& find_xrefs(
 			SignatureScanner::XRefTypes types,
 			std::uint8_t instruction_length,
-			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
+			const SearchConstraints<Constraints...>& search_constraints)
 		{
 			return flat_map([types, instruction_length, &search_constraints](const InnerSafePointer& safe_pointer) {
 				return safe_pointer.find_xrefs(types, instruction_length, search_constraints);
 			});
 		}
-
 		Session& find_xrefs(
 			SignatureScanner::XRefTypes types,
-			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
+			std::uint8_t instruction_length)
+		{
+			return find_xrefs(types, instruction_length, EVERYTHING_READABLE);
+		}
+
+		template <typename... Constraints>
+		Session& find_xrefs(
+			SignatureScanner::XRefTypes types,
+			const SearchConstraints<Constraints...>& search_constraints)
 		{
 			return flat_map([types, &search_constraints](const InnerSafePointer& safe_pointer) {
 				return safe_pointer.find_xrefs(types, search_constraints);
 			});
+		}
+		Session& find_xrefs(
+			SignatureScanner::XRefTypes types)
+		{
+			return find_xrefs(types, EVERYTHING_READABLE);
 		}
 
 		Session& relative_to_absolute()
@@ -296,11 +324,11 @@ namespace BCRL {
 		return { memory_manager, std::vector<SafePointer<MemMgr>>{ SafePointer(memory_manager, array).dereference().add(index * sizeof(std::uintptr_t)).dereference() } };
 	}
 
-	template <typename MemMgr>
+	template <typename MemMgr, typename... Constraints>
 		requires MemoryManager::LayoutAware<MemMgr> && MemoryManager::AddressAware<typename MemMgr::RegionT> && MemoryManager::NameAware<typename MemMgr::RegionT> && MemoryManager::FlagAware<typename MemMgr::RegionT>
 	[[nodiscard]] inline Session<MemMgr> regions(
 		const MemMgr& memory_manager,
-		const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
+		const SearchConstraints<Constraints...>& search_constraints)
 	{
 		std::vector<std::uintptr_t> bases;
 		for (const auto& region : memory_manager.get_layout())
@@ -310,11 +338,17 @@ namespace BCRL {
 	}
 
 	template <typename MemMgr>
+	[[nodiscard]] inline Session<MemMgr> regions(const MemMgr& memory_manager)
+	{
+		return regions(memory_manager, EVERYTHING_READABLE);
+	}
+
+	template <typename MemMgr, typename... Constraints>
 		requires MemoryManager::Viewable<typename MemMgr::RegionT>
 	[[nodiscard]] inline Session<MemMgr> signature(
 		const MemMgr& memory_manager,
 		const SignatureScanner::PatternSignature& signature,
-		const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable())
+		const SearchConstraints<Constraints...> search_constraints)
 	{
 		std::vector<std::uintptr_t> pointers{};
 
@@ -342,6 +376,12 @@ namespace BCRL {
 		}
 
 		return { memory_manager, pointers };
+	}
+
+	template <typename MemMgr>
+	[[nodiscard]] inline Session<MemMgr> signature(const MemMgr& memory_manager, const SignatureScanner::PatternSignature& signature)
+	{
+		return ::BCRL::signature(memory_manager, signature, EVERYTHING_READABLE);
 	}
 
 	template <typename MemMgr, std::ranges::range Range>

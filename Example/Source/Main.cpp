@@ -38,7 +38,7 @@ int main()
 	 */
 
 	auto another_secret_method = BCRL::signature(local_memory_manager, SignatureScanner::PatternSignature::for_literal_string<"You will never find me!">())
-									 .find_xrefs(SignatureScanner::XRefTypes::relative_and_absolute(), BCRL::everything(local_memory_manager).thats_readable().with_name("libExampleTarget.so")) // This lands us in super_secret_method at the offset of the lea instruction ("48 8d 05 HERE-> 88 0e 00 00")
+									 .find_xrefs(SignatureScanner::XRefTypes::relative_and_absolute(), EVERYTHING_READABLE.with_name("libExampleTarget.so")) // This lands us in super_secret_method at the offset of the lea instruction ("48 8d 05 HERE-> 88 0e 00 00")
 									 .add(4) // Skip the offset
 									 .repeat_while([](auto& s) {
 										 const bool has_call = s.does_match(SignatureScanner::PatternSignature::for_array_of_bytes<"e8">());
@@ -50,12 +50,12 @@ int main()
 									 .filter([](const auto& ptr) { return ptr.does_match(SignatureScanner::PatternSignature::for_array_of_bytes<"e8">()); }) // Verify that there's another call instruction here
 									 .add(1) // Skip the opcode
 									 .relative_to_absolute() // Jump to the target of the relative offset
-									 .filter(BCRL::everything(local_memory_manager).with_flags("r-x").with_name("libExampleTarget.so"))
+									 .filter(DEFAULT_CONSTRAINTS.with_flags("r-x").with_name("libExampleTarget.so"))
 									 .for_each([](const auto& ptr) { std::println("another_secret_method: 0x{:x}", ptr.get_pointer()); })
 									 .expect<void (*)()>("Couldn't find another_secret_method", "Found too many solutions.");
 
 	auto strings = BCRL::signature(local_memory_manager, SignatureScanner::PatternSignature::for_literal_string<"I really really really really really love Linux!">())
-					   .filter(BCRL::everything(local_memory_manager).thats_readable().with_name("libExampleTarget.so"))
+					   .filter(EVERYTHING_READABLE.with_name("libExampleTarget.so"))
 					   .peek();
 
 	assert(!strings.empty());

@@ -123,9 +123,10 @@ namespace BCRL {
 
 		// Patterns
 		// Previous occurrence of pattern signature
+		template <typename... Constraints>
 		SafePointer& prev_signature_occurrence(
 			const SignatureScanner::PatternSignature& signature,
-			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable(),
+			const SearchConstraints<Constraints...>& search_constraints,
 			const bool match_current = false)
 			requires MemoryManager::Viewable<typename MemMgr::RegionT>
 		{
@@ -162,11 +163,16 @@ namespace BCRL {
 				- std::distance(std::make_reverse_iterator(view.cend()), hit);
 			return revalidate();
 		}
+		SafePointer& prev_signature_occurrence(const SignatureScanner::PatternSignature& signature, const bool match_current = false)
+		{
+			return prev_signature_occurrence(signature, EVERYTHING_READABLE, match_current);
+		}
 
 		// Next occurrence of pattern signature
+		template <typename... Constraints>
 		SafePointer& next_signature_occurrence(
 			const SignatureScanner::PatternSignature& signature,
-			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable(),
+			const SearchConstraints<Constraints...>& search_constraints,
 			const bool match_current = false)
 			requires MemoryManager::Viewable<typename MemMgr::RegionT>
 		{
@@ -195,6 +201,10 @@ namespace BCRL {
 			pointer = region->get_address() + std::distance(view.cbegin(), hit);
 			return revalidate();
 		}
+		SafePointer& next_signature_occurrence(const SignatureScanner::PatternSignature& signature, const bool match_current = false)
+		{
+			return next_signature_occurrence(signature, EVERYTHING_READABLE, match_current);
+		}
 
 		// Tests if the given pattern signature matches the current address
 		[[nodiscard]] bool does_match(const SignatureScanner::PatternSignature& signature) const
@@ -216,10 +226,11 @@ namespace BCRL {
 
 	public:
 		// Since there can be multiple xrefs, this returns multiple addresses
+		template <typename... Constraints>
 		[[nodiscard]] std::vector<SafePointer> find_xrefs(
 			SignatureScanner::XRefTypes types,
 			std::uint8_t instruction_length,
-			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable()) const
+			const SearchConstraints<Constraints...>& search_constraints) const
 			requires MemoryManager::Viewable<typename MemMgr::RegionT>
 		{
 			std::vector<SafePointer> new_pointers;
@@ -244,13 +255,22 @@ namespace BCRL {
 
 			return new_pointers;
 		}
+		[[nodiscard]] std::vector<SafePointer> find_xrefs(SignatureScanner::XRefTypes types, std::uint8_t instruction_length) const
+		{
+			return find_xrefs(types, instruction_length, EVERYTHING_READABLE);
+		}
 
+		template <typename... Constraints>
 		[[nodiscard]] std::vector<SafePointer> find_xrefs(
 			SignatureScanner::XRefTypes types,
-			const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable()) const
+			const SearchConstraints<Constraints...>& search_constraints) const
 			requires MemoryManager::Viewable<typename MemMgr::RegionT>
 		{
 			return find_xrefs(types, sizeof(RelAddrType), search_constraints);
+		}
+		[[nodiscard]] std::vector<SafePointer> find_xrefs(SignatureScanner::XRefTypes types) const
+		{
+			return find_xrefs(types, EVERYTHING_READABLE);
 		}
 
 		SafePointer& relative_to_absolute()
@@ -296,7 +316,8 @@ namespace BCRL {
 		}
 
 		// Filters
-		[[nodiscard]] bool filter(const SearchConstraints<typename MemMgr::RegionT>& search_constraints = everything<MemMgr>().thats_readable()) const
+		template <typename... Constraints>
+		[[nodiscard]] bool filter(const SearchConstraints<Constraints...>& search_constraints) const
 		{
 			auto* region = memory_manager->get_layout().find_region(pointer);
 			if (!region || !search_constraints.allows_region(*region))
