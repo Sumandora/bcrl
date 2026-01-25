@@ -222,20 +222,24 @@ namespace BCRL {
 		static constexpr LengthDisassembler::MachineMode DEFAULT_MACHINE_MODE = IS_64_BIT
 			? LengthDisassembler::MachineMode::LONG_MODE
 			: LengthDisassembler::MachineMode::LONG_COMPATIBILITY_MODE;
-		using RelAddrType = std::conditional_t<IS_64_BIT, int32_t, int16_t>;
+		using RelAddrType = SignatureScanner::RelativeAndAbsoluteXRefSignature::RelAddrType;
 
 	public:
 		// Since there can be multiple xrefs, this returns multiple addresses
-		template <typename... Constraints>
+		template <SignatureScanner::XRefType XRefType, typename... Constraints>
 		[[nodiscard]] std::vector<SafePointer> find_xrefs(
-			SignatureScanner::XRefTypes types,
 			std::uint8_t instruction_length,
 			const SearchConstraints<Constraints...>& search_constraints) const
 			requires MemoryManager::Viewable<typename MemMgr::RegionT>
 		{
 			std::vector<SafePointer> new_pointers;
 
-			SignatureScanner::XRefSignature signature{ types, pointer, instruction_length };
+			const auto signature = [&] {
+				if constexpr (XRefType == SignatureScanner::XRefType::ABSOLUTE)
+					return SignatureScanner::XRefSignature<XRefType>{ pointer };
+				else
+					return SignatureScanner::XRefSignature<XRefType>{ pointer, instruction_length };
+			}();
 			for (const auto& region : memory_manager->get_layout()) {
 				if (!search_constraints.allows_region(region))
 					continue;
@@ -255,22 +259,26 @@ namespace BCRL {
 
 			return new_pointers;
 		}
-		[[nodiscard]] std::vector<SafePointer> find_xrefs(SignatureScanner::XRefTypes types, std::uint8_t instruction_length) const
+
+		template <SignatureScanner::XRefType XRefType>
+		[[nodiscard]] std::vector<SafePointer> find_xrefs(std::uint8_t instruction_length) const
 		{
-			return find_xrefs(types, instruction_length, EVERYTHING_READABLE);
+			static_assert(XRefType != SignatureScanner::XRefType::ABSOLUTE, "Specifying an instruction length has no effect for absolute xrefs");
+			return find_xrefs<XRefType>(instruction_length, EVERYTHING_READABLE);
 		}
 
-		template <typename... Constraints>
+		template <SignatureScanner::XRefType XRefType, typename... Constraints>
 		[[nodiscard]] std::vector<SafePointer> find_xrefs(
-			SignatureScanner::XRefTypes types,
 			const SearchConstraints<Constraints...>& search_constraints) const
 			requires MemoryManager::Viewable<typename MemMgr::RegionT>
 		{
-			return find_xrefs(types, sizeof(RelAddrType), search_constraints);
+			return find_xrefs<XRefType, Constraints...>(sizeof(RelAddrType), search_constraints);
 		}
-		[[nodiscard]] std::vector<SafePointer> find_xrefs(SignatureScanner::XRefTypes types) const
+
+		template <SignatureScanner::XRefType XRefType>
+		[[nodiscard]] std::vector<SafePointer> find_xrefs() const
 		{
-			return find_xrefs(types, EVERYTHING_READABLE);
+			return find_xrefs<XRefType>(EVERYTHING_READABLE);
 		}
 
 		SafePointer& relative_to_absolute()

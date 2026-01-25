@@ -69,7 +69,7 @@ namespace BCRL {
 
 		bool operator==(MemoryManager::Flags flags) const
 		{
-			return matches_readable(flags.is_readable()) && matches_writable(flags.is_writeable()) && matches_executable(flags.is_executable());
+			return matches_readable(flags.is_readable()) && matches_writable(flags.is_writable()) && matches_executable(flags.is_executable());
 		}
 	};
 }

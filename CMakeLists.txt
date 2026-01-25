@@ -15,7 +15,7 @@ if(NOT TARGET SignatureScanner)
 		SignatureScanner
 		GIT_REPOSITORY https://github.com/Sumandora/SignatureScanner
 		GIT_PROGRESS TRUE
-		GIT_TAG 3.3.1)
+		GIT_TAG 3.4.1)
 	FetchContent_MakeAvailable(SignatureScanner)
 endif()
 target_link_libraries(BCRL INTERFACE SignatureScanner)
@@ -25,7 +25,7 @@ if(NOT TARGET LengthDisassembler)
 		LengthDisassembler
 		GIT_REPOSITORY https://github.com/Sumandora/LengthDisassembler
 		GIT_PROGRESS TRUE
-		GIT_TAG 1.0.1)
+		GIT_TAG 1.0.2)
 	FetchContent_MakeAvailable(LengthDisassembler)
 endif()
 target_link_libraries(BCRL INTERFACE LengthDisassembler)
@@ -35,7 +35,7 @@ if(NOT TARGET MemoryManager)
 		MemoryManager
 		GIT_REPOSITORY https://github.com/Sumandora/MemoryManager
 		GIT_PROGRESS TRUE
-		GIT_TAG 2.6.1)
+		GIT_TAG 2.7.1)
 	FetchContent_MakeAvailable(MemoryManager)
 endif()
 target_link_libraries(BCRL INTERFACE MemoryManager)

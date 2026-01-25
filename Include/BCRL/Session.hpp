@@ -129,36 +129,34 @@ namespace BCRL {
 		}
 
 		// X86
-		template <typename... Constraints>
+		template <SignatureScanner::XRefType XRefType, typename... Constraints>
 		Session& find_xrefs(
-			SignatureScanner::XRefTypes types,
 			std::uint8_t instruction_length,
 			const SearchConstraints<Constraints...>& search_constraints)
 		{
-			return flat_map([types, instruction_length, &search_constraints](const InnerSafePointer& safe_pointer) {
-				return safe_pointer.find_xrefs(types, instruction_length, search_constraints);
+			return flat_map([instruction_length, &search_constraints](const InnerSafePointer& safe_pointer) {
+				return safe_pointer.template find_xrefs<XRefType>(instruction_length, search_constraints);
 			});
-		}
-		Session& find_xrefs(
-			SignatureScanner::XRefTypes types,
-			std::uint8_t instruction_length)
-		{
-			return find_xrefs(types, instruction_length, EVERYTHING_READABLE);
 		}
 
-		template <typename... Constraints>
-		Session& find_xrefs(
-			SignatureScanner::XRefTypes types,
-			const SearchConstraints<Constraints...>& search_constraints)
+		template <SignatureScanner::XRefType XRefType>
+		Session& find_xrefs(std::uint8_t instruction_length)
 		{
-			return flat_map([types, &search_constraints](const InnerSafePointer& safe_pointer) {
-				return safe_pointer.find_xrefs(types, search_constraints);
+			return find_xrefs<XRefType>(instruction_length);
+		}
+
+		template <SignatureScanner::XRefType XRefType, typename... Constraints>
+		Session& find_xrefs(const SearchConstraints<Constraints...>& search_constraints)
+		{
+			return flat_map([&search_constraints](const InnerSafePointer& safe_pointer) {
+				return safe_pointer.template find_xrefs<XRefType>(search_constraints);
 			});
 		}
-		Session& find_xrefs(
-			SignatureScanner::XRefTypes types)
+
+		template <SignatureScanner::XRefType XRefType>
+		Session& find_xrefs()
 		{
-			return find_xrefs(types, EVERYTHING_READABLE);
+			return find_xrefs<XRefType>();
 		}
 
 		Session& relative_to_absolute()
@@ -363,16 +361,9 @@ namespace BCRL {
 
 			search_constraints.clamp_to_address_range(region, view.cbegin(), begin, end);
 
-			if constexpr (std::same_as<decltype(signature), const SignatureScanner::XRefSignature&>) {
-				signature.all(begin, end, detail::LambdaInserter([&](decltype(begin) p) {
-					pointers.push_back(region.get_address() + std::distance(view.cbegin(), p));
-				}),
-					region.get_address() + std::distance(view.cbegin(), begin));
-			} else {
-				signature.all(begin, end, detail::LambdaInserter([&](decltype(begin) p) {
-					pointers.push_back(region.get_address() + std::distance(view.cbegin(), p));
-				}));
-			}
+			signature.all(begin, end, detail::LambdaInserter([&](decltype(begin) p) {
+				pointers.push_back(region.get_address() + std::distance(view.cbegin(), p));
+			}));
 		}
 
 		return { memory_manager, pointers };

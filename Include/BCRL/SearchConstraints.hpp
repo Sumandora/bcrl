@@ -308,7 +308,7 @@ namespace BCRL {
 					if (flags.has_readable && flags.readable != region.get_flags().is_readable())
 						return false;
 
-					if (flags.has_writable && flags.writable != region.get_flags().is_writeable())
+					if (flags.has_writable && flags.writable != region.get_flags().is_writable())
 						return false;
 
 					if (flags.has_executable && flags.executable != region.get_flags().is_executable())
